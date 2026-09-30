@@ -1,0 +1,10 @@
+{
+  "name":"PETER Personal Control System",
+  "short_name":"PETER",
+  "start_url":"./index.html",
+  "display":"standalone",
+  "background_color":"#070707",
+  "theme_color":"#080808",
+  "description":"Personal command center and roadmap.",
+  "icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
