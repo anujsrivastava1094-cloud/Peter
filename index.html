@@ -146,21 +146,36 @@ if (SpeechRecognition) {
   recognition.interimResults = false;
 
   micBtn.onclick = () => {
-    recognition.start();
-    speechText.textContent = "Listening...";
-  };
+  recognition.start();
+  speechText.textContent = "Listening...";
+};
 
-  recognition.onresult = (event) => {
-    const text = event.results[0][0].transcript;
-    speechText.textContent = "You said: " + text;
-  };
+recognition.onresult = (event) => {
+  const text = event.results[0][0].transcript.toLowerCase();
+  speechText.textContent = "You said: " + text;
 
-  recognition.onerror = () => {
-    speechText.textContent = "I couldn't hear that. Try again.";
-  };
+  if (text.includes("what time is it") || text.includes("time")) {
+    const now = new Date();
+
+    const time = now.toLocaleTimeString("en-IN", {
+      hour: "numeric",
+      minute: "2-digit"
+    });
+
+    const reply = "The current time is " + time + ".";
+
+    speechText.textContent = reply;
+
+    const voice = new SpeechSynthesisUtterance(reply);
+    voice.lang = "en-IN";
+    speechSynthesis.speak(voice);
+  }
+};
+
+recognition.onerror = () => {
+  speechText.textContent = "I couldn't hear that. Try again.";
+};
 } else {
   speechText.textContent = "Voice recognition is not supported.";
 }
 </script></body></html>
-
-
