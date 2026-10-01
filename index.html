@@ -155,11 +155,12 @@ if (SpeechRecognition) {
 
   micBtn.onclick = () => {
   recognition.start();
-  speechText.textContent = "Listening...";
+  speechText.textContent = "Hummm...";
 };
 
 recognition.onresult = (event) => {
   const text = event.results[0][0].transcript.toLowerCase();
+  peterCore(transcript);
   speechText.textContent = "You said: " + text;
 
   if (text.includes("what time is it") || text.includes("time")) {
@@ -180,7 +181,68 @@ recognition.onresult = (event) => {
   }
 };
 
-recognition.onerror = () => {
+function peterCore(command) {
+
+  command = command.toLowerCase().trim();
+
+  // TIME
+  if (command.includes("time")) {
+    const now = new Date();
+
+    const time = now.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+    speechText.textContent = "The time is " + time;
+    return;
+  }
+
+  // DATE
+  if (
+    command.includes("date") ||
+    command.includes("today")
+  ) {
+    const now = new Date();
+
+    const date = now.toLocaleDateString([], {
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
+
+    speechText.textContent = "Today is " + date;
+    return;
+  }
+
+  // OPEN SCHOOL
+  if (
+    command.includes("open school") ||
+    command === "school"
+  ) {
+    document.getElementById("schoolSection").style.display = "block";
+
+    speechText.textContent = "Opening School.";
+    return;
+  }
+
+  // GO HOME
+  if (
+    command.includes("go home") ||
+    command === "home"
+  ) {
+    document.getElementById("schoolSection").style.display = "none";
+
+    speechText.textContent = "Going home.";
+    return;
+  }
+
+  // UNKNOWN COMMAND
+  speechText.textContent =
+    "I don't understand that command yet.";
+  }
+  
+  recognition.onerror = () => {
   speechText.textContent = "I couldn't hear that. Try again.";
 };
 } else {
