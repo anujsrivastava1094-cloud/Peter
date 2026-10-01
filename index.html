@@ -160,8 +160,548 @@ function getStreak(){let d=JSON.parse(localStorage.getItem('peter_activity')||'[
 function touchActivity(){let d=JSON.parse(localStorage.getItem('peter_activity')||'[]');let today=new Date().toISOString().slice(0,10);if(!d.includes(today))d.push(today);localStorage.setItem('peter_activity',JSON.stringify(d.slice(-60)))}
 function renderHome(){let cards=data.blocks.map(b=>{let p=progressFor(b);return `<button class="card" onclick="openDetail('${esc(b.id)}')"><div class="emoji">${b.icon}</div><h3>${esc(b.title)}</h3><p>${esc(b.desc)}</p><div class="progress"><i style="width:${p}%"></i></div></button>`}).join('');$('dashboard').innerHTML=cards+`<button class="card special" onclick="showView('timeline')"><div class="emoji">🗓️</div><div class="meta"><h3>Today's Timeline</h3><p>Full day, from start to wind down.</p></div><div class="arrow">›</div></button><button class="card special" onclick="showView('tasks')"><div class="emoji">✓</div><div class="meta"><h3>Today's Tasks</h3><p>Detailed instructions for each time slot.</p></div><div class="arrow">›</div></button>`;$('date').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});$('overallProgress').textContent=calcOverall()+'%';$('streak').textContent=getStreak();$('completedToday').textContent=JSON.parse(localStorage.getItem('peter_completed_today')||'0');renderNotes();}
 
-function openDetail(id){let b=data.blocks.find(x=>x.id===id);if(!b)return;$('detailTitle').textContent=b.title;$('detailSub').textContent=b.desc;$('detailHero').innerHTML=`<div class="hero"><h3>Mission</h3><p>${esc(b.goal)}</p><div class="stats"><div class="stat"><b>${b.modules.length}</b><span>Modules</span></div><div class="stat"><b>${progressFor(b)}%</b><span>Progress</span></div><div class="stat"><b>${b.modules.reduce((n,m)=>n+m[2].length,0)}</b><span>Actions</span></div></div></div>`;$('roadmap').innerHTML=b.modules.map((m,i)=>{let done=localStorage.getItem('peter_done_'+b.id+'_'+i)==='1';return `<div class="module ${done?'done':''}" id="mod${i}"><button onclick="toggleModule(${i})"><span class="num">${i+1}</span><span><strong>${esc(m[0])}</strong><small>${esc(m[1])}</small></span><span class="arrow">›</span></button><div class="module-body"><div class="detail-row"><b>Action checklist</b>${m[2].map((x,j)=>`<label class="check"><input type="checkbox" ${done?'checked':''} onchange="markModule('${esc(b.id)}',${i},this.checked)"><span>${esc(x)}</span></label>`).join('')}</div><div class="detail-row"><b>Deep guidance</b>${m[3].map(x=>`<p>• ${esc(x)}</p>`).join('')}</div><div class="detail-row"><b>Complete when</b><p>You've actually performed the module and can explain what you learned or improved.</p></div></div></div>`}).join('');showView('detail');}
+
+  function openDetail(id){
+
+  let b=data.blocks.find(x=>x.id===id);
+  if(!b)return;
+
+  $('detailTitle').textContent=b.title;
+  $('detailSub').textContent=b.desc;
+
+  // =========================
+  // SCHOOL SPECIAL INTERFACE
+  // =========================
+
+  if(b.id==='school'){
+
+    $('detailHero').innerHTML=`
+      <div class="hero">
+        <h3>School System</h3>
+        <p>${esc(b.goal)}</p>
+
+        <div class="stats">
+          <div class="stat">
+            <b>5</b>
+            <span>Subjects</span>
+          </div>
+
+          <div class="stat">
+            <b>—</b>
+            <span>Chapters</span>
+          </div>
+
+          <div class="stat">
+            <b>3</b>
+            <span>Resources</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    $('roadmap').innerHTML=b.modules.map((subject,i)=>{
+
+      return `
+        <div class="module" id="schoolSubject${i}">
+
+          <button onclick="toggleModule(${i})">
+
+            <span class="num">${i+1}</span>
+
+            <span>
+              <strong>${esc(subject[0])}</strong>
+              <small>${esc(subject[1])}</small>
+            </span>
+
+            <span class="arrow">›</span>
+
+          </button>
+
+          <div class="module-body">
+
+            <div class="detail-row">
+
+              <b>Chapters</b>
+
+              ${subject[2].map((chapter,j)=>`
+
+                <button
+                  class="school-chapter"
+                  onclick="openSchoolChapter('${esc(subject[0])}',${i},${j})"
+                  style="
+                    width:100%;
+                    margin-top:8px;
+                    padding:13px;
+                    background:#0b0b0b;
+                    color:#fff;
+                    border:1px solid #292929;
+                    border-radius:12px;
+                    text-align:left;
+                  "
+                >
+
+                  <span style="color:#ff6970;font-weight:800;">
+                    ${j+1}.
+                  </span>
+
+                  ${esc(chapter)}
+
+                  <span style="float:right;color:#777;">›</span>
+
+                </button>
+
+              `).join('')}
+
+            </div>
+
+          </div>
+
+        </div>
+      `;
+
+    }).join('');
+
+    showView('detail');
+    return;
+  }
+
+
+  // =========================
+  // NORMAL PETER BLOCKS
+  // =========================
+
+  $('detailHero').innerHTML=`
+    <div class="hero">
+      <h3>Mission</h3>
+      <p>${esc(b.goal)}</p>
+
+      <div class="stats">
+
+        <div class="stat">
+          <b>${b.modules.length}</b>
+          <span>Modules</span>
+        </div>
+
+        <div class="stat">
+          <b>${progressFor(b)}%</b>
+          <span>Progress</span>
+        </div>
+
+        <div class="stat">
+          <b>${b.modules.reduce((n,m)=>n+m[2].length,0)}</b>
+          <span>Actions</span>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+
+  $('roadmap').innerHTML=b.modules.map((m,i)=>{
+
+    let done=
+      localStorage.getItem(
+        'peter_done_'+b.id+'_'+i
+      )==='1';
+
+    return `
+
+      <div
+        class="module ${done?'done':''}"
+        id="mod${i}"
+      >
+
+        <button onclick="toggleModule(${i})">
+
+          <span class="num">${i+1}</span>
+
+          <span>
+
+            <strong>${esc(m[0])}</strong>
+
+            <small>${esc(m[1])}</small>
+
+          </span>
+
+          <span class="arrow">›</span>
+
+        </button>
+
+        <div class="module-body">
+
+          <div class="detail-row">
+
+            <b>Action checklist</b>
+
+            ${m[2].map((x,j)=>`
+
+              <label class="check">
+
+                <input
+                  type="checkbox"
+                  ${done?'checked':''}
+                  onchange="markModule('${esc(b.id)}',${i},this.checked)"
+                >
+
+                <span>${esc(x)}</span>
+
+              </label>
+
+            `).join('')}
+
+          </div>
+
+
+          <div class="detail-row">
+
+            <b>Deep guidance</b>
+
+            ${m[3].map(x=>`
+              <p>• ${esc(x)}</p>
+            `).join('')}
+
+          </div>
+
+
+          <div class="detail-row">
+
+            <b>Complete when</b>
+
+            <p>
+              You've actually performed the module
+              and can explain what you learned or improved.
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    `;
+
+  }).join('');
+
+  showView('detail');
+  }
 function toggleModule(i){let el=document.getElementById('mod'+i);el.classList.toggle('open')}
+  function openSchoolChapter(subjectName,subjectIndex,chapterIndex){
+
+  let school=data.blocks.find(x=>x.id==='school');
+
+  if(!school)return;
+
+  let subject=school.modules[subjectIndex];
+
+  if(!subject)return;
+
+  let chapterName=subject[2][chapterIndex];
+
+  if(!chapterName)return;
+
+
+  // =================================
+  // PHYSICS → UNITS AND MEASUREMENTS
+  // =================================
+
+  let isPhysics=
+    subjectName.includes('Physics');
+
+  let isUnits=
+    chapterName==='Units and Measurements';
+
+
+  let classLink='';
+
+  if(isPhysics && isUnits){
+
+    classLink=
+      'https://youtube.com/playlist?list=PLUd0NRwIz1s4&si=fP5wepV4IHqZQyEe';
+
+  }
+
+
+  $('detailTitle').textContent=chapterName;
+
+  $('detailSub').textContent=
+    subjectName+' → '+chapterName;
+
+
+  $('detailHero').innerHTML=`
+
+    <div class="hero">
+
+      <h3>${esc(chapterName)}</h3>
+
+      <p>
+        Complete this chapter through
+        Class → NCERT → Module.
+      </p>
+
+      <div class="stats">
+
+        <div class="stat">
+          <b>3</b>
+          <span>Resources</span>
+        </div>
+
+        <div class="stat">
+          <b>0%</b>
+          <span>Progress</span>
+        </div>
+
+        <div class="stat">
+          <b>${esc(subjectName)}</b>
+          <span>Subject</span>
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+
+
+  $('roadmap').innerHTML=`
+
+    <!-- CLASS -->
+
+    <div class="module" id="schoolResourceClass">
+
+      <button onclick="toggleSchoolResource('schoolResourceClass')">
+
+        <span class="num">1</span>
+
+        <span>
+
+          <strong>🎥 Class</strong>
+
+          <small>
+            Watch your complete class resource.
+          </small>
+
+        </span>
+
+        <span class="arrow">›</span>
+
+      </button>
+
+      <div class="module-body">
+
+        <div class="detail-row">
+
+          <b>Class Resource</b>
+
+          ${
+            classLink
+            ?
+            `
+            <p>
+              Your class playlist for
+              ${esc(chapterName)}.
+            </p>
+
+            <a
+              href="${classLink}"
+              target="_blank"
+              rel="noopener"
+              style="
+                display:inline-block;
+                margin-top:10px;
+                padding:10px 13px;
+                background:#26080a;
+                border:1px solid #5c0b10;
+                border-radius:10px;
+                color:#fff;
+                text-decoration:none;
+                font-size:11px;
+                font-weight:700;
+              "
+            >
+              ▶ Open Class Playlist
+            </a>
+            `
+            :
+            `
+            <p>
+              Class resource will be added here.
+            </p>
+            `
+          }
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- NCERT -->
+
+    <div class="module" id="schoolResourceNCERT">
+
+      <button onclick="toggleSchoolResource('schoolResourceNCERT')">
+
+        <span class="num">2</span>
+
+        <span>
+
+          <strong>📖 NCERT</strong>
+
+          <small>
+            Solve NCERT back exercises.
+          </small>
+
+        </span>
+
+        <span class="arrow">›</span>
+
+      </button>
+
+      <div class="module-body">
+
+        <div class="detail-row">
+
+          <b>NCERT Back Exercises</b>
+
+          <p>
+            Solve the complete NCERT back exercise
+            for ${esc(chapterName)}.
+          </p>
+
+          <label class="check">
+
+            <input
+              type="checkbox"
+              onchange="markSchoolResource(
+                '${esc(subjectName)}',
+                '${esc(chapterName)}',
+                'ncert',
+                this.checked
+              )"
+            >
+
+            <span>
+              NCERT back exercises completed
+            </span>
+
+          </label>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- MODULE -->
+
+    <div class="module" id="schoolResourceModule">
+
+      <button onclick="toggleSchoolResource('schoolResourceModule')">
+
+        <span class="num">3</span>
+
+        <span>
+
+          <strong>📘 Module</strong>
+
+          <small>
+            Complete your chapter module.
+          </small>
+
+        </span>
+
+        <span class="arrow">›</span>
+
+      </button>
+
+      <div class="module-body">
+
+        <div class="detail-row">
+
+          <b>Chapter Module</b>
+
+          <p>
+            Your module PDF will appear here
+            when it is added to PETER.
+          </p>
+
+          <p style="color:#777;">
+            Module file: awaiting upload
+          </p>
+
+          <label class="check">
+
+            <input
+              type="checkbox"
+              onchange="markSchoolResource(
+                '${esc(subjectName)}',
+                '${esc(chapterName)}',
+                'module',
+                this.checked
+              )"
+            >
+
+            <span>
+              Module completed
+            </span>
+
+          </label>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+
+  showView('detail');
+  }
+  function toggleSchoolResource(id){
+
+  let el=document.getElementById(id);
+
+  if(el){
+    el.classList.toggle('open');
+  }
+
+  }
+  function markSchoolResource(subject,chapter,type,checked){
+
+  let key=
+    'peter_school_' +
+    subject +
+    '_' +
+    chapter +
+    '_' +
+    type;
+
+  localStorage.setItem(
+    key,
+    checked?'1':'0'
+  );
+
+  if(checked){
+    touchActivity();
+
+    let n=
+      +localStorage.getItem(
+        'peter_completed_today'
+      )||0;
+
+    localStorage.setItem(
+      'peter_completed_today',
+      String(n+1)
+    );
+
+    showToast(
+      'Progress saved.'
+    );
+  }
+
+  }
 function markModule(id,i,checked){localStorage.setItem('peter_done_'+id+'_'+i,checked?'1':'0');if(checked){touchActivity();let n=+localStorage.getItem('peter_completed_today')||0;localStorage.setItem('peter_completed_today',String(n+1));showToast('Module completed — progress saved.')}let b=data.blocks.find(x=>x.id===id);openDetail(id);renderHome();setTimeout(()=>{let el=document.getElementById('mod'+i);if(el)el.classList.add('open')},0)}
 function renderTimeline(){$('timelineList').innerHTML=data.timeline.map(x=>`<div class="slot"><div class="time">${esc(x.time)}</div><div class="slotbox"><strong>${esc(x.title)}</strong><p>${esc(x.desc)}</p></div></div>`).join('')}
 function renderTasks(){$('taskList').innerHTML=data.tasks.map(x=>`<div class="taskbox"><h4>${esc(x.time)} · ${esc(x.title)}</h4><ul>${x.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`).join('')}
