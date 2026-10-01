@@ -771,18 +771,6 @@ if (SpeechRecognition) {
 
     peterCore(text);
   };
-
-  let peterVoices = [];
-
-function loadPeterVoices() {
-  peterVoices = speechSynthesis.getVoices();
-}
-
-if ("speechSynthesis" in window) {
-  loadPeterVoices();
-  speechSynthesis.onvoiceschanged = loadPeterVoices;
-}
-
 function peterSpeak(text) {
 
   if (!("speechSynthesis" in window)) {
@@ -792,28 +780,16 @@ function peterSpeak(text) {
 
   speechSynthesis.cancel();
 
-  if (peterVoices.length === 0) {
-    peterVoices = speechSynthesis.getVoices();
-  }
-
-  // Find the best available English voice
-  let voice =
-    peterVoices.find(v => v.lang === "en-IN") ||
-    peterVoices.find(v => v.lang === "en-US") ||
-    peterVoices.find(v => v.lang === "en-GB") ||
-    peterVoices.find(v => v.lang.startsWith("en"));
-
   const speech = new SpeechSynthesisUtterance(text);
 
-  if (voice) {
-    speech.voice = voice;
-    speech.lang = voice.lang;
-  } else {
-    speech.lang = "en-IN";
-  }
+  speech.lang = "en-IN";
 
-  speech.rate = 0.88;
-  speech.pitch = 0.72;
+  // Keep the original voice
+  speech.rate = 1.0;
+
+  // Slightly deeper, but not exaggerated
+  speech.pitch = 0.85;
+
   speech.volume = 1;
 
   speechSynthesis.speak(speech);
