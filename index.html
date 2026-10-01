@@ -864,7 +864,36 @@ function peterSpeak(text) {
 
       return;
     }
+   // TODAY'S TARGET
+   if (
+      command.includes("target today") ||
+      command.includes("today's target") ||
+      command.includes("todays target") ||
+      command.includes("my target today")
+    ) {
 
+  if (data.tasks && data.tasks.length > 0) {
+
+    const targets = data.tasks
+      .map(task => {
+        if (task.items && task.items.length > 0) {
+          return task.title + ". " + task.items.join(". ");
+        }
+
+        return task.title;
+      })
+      .join(". ");
+
+    peterSpeak("Your targets for today are: " + targets);
+
+  } else {
+
+    peterSpeak("You don't have any targets set for today.");
+
+  }
+
+  return;
+}
     // UNKNOWN COMMAND
     peterSpeak("I don't understand that command yet.");
   }
