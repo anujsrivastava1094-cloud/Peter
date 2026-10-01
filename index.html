@@ -757,6 +757,26 @@ if (SpeechRecognition) {
     peterCore(text);
   };
 
+  function peterSpeak(text) {
+
+  if (!("speechSynthesis" in window)) {
+    speechText.textContent = text;
+    return;
+  }
+
+  speechSynthesis.cancel();
+
+  const speech = new SpeechSynthesisUtterance(text);
+
+  speech.lang = "en-IN";
+  speech.rate = 0.95;
+  speech.pitch = 0.8;
+  speech.volume = 1;
+
+  speechSynthesis.speak(speech);
+
+  speechText.textContent = text;
+  }
   function peterCore(command) {
 
     command = command.toLowerCase().trim();
@@ -774,8 +794,7 @@ if (SpeechRecognition) {
         minute: "2-digit"
       });
 
-      speechText.textContent =
-        "The current time is " + time + ".";
+      peterSpeak("The current time is " + time + ".");
 
       return;
     }
@@ -796,8 +815,7 @@ if (SpeechRecognition) {
         year: "numeric"
       });
 
-      speechText.textContent =
-        "Today is " + date + ".";
+      peterSpeak("Today is " + date + ".");
 
       return;
     }
@@ -810,8 +828,7 @@ if (SpeechRecognition) {
 
       openSchool();
 
-      speechText.textContent =
-        "Opening School.";
+      peterSpeak("Opening School.");
 
       return;
     }
@@ -824,15 +841,13 @@ if (SpeechRecognition) {
 
       gohome();
 
-      speechText.textContent =
-        "Going home.";
+      peterSpeak("Going home.");
 
       return;
     }
 
     // UNKNOWN COMMAND
-    speechText.textContent =
-      "I don't understand that command yet.";
+  { peterSpeak("I don't understand that command yet.");
   }
 
   recognition.onerror = () => {
