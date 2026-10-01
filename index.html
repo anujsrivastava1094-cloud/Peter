@@ -21,6 +21,27 @@ h2{margin:5px 0 4px;font-size:28px}.sub{color:var(--muted);font-size:13px;margin
 <div id="home" class="view show">
 <div class="hero-dashboard"><div class="eyebrow">PETER // COMMAND CENTER</div><h2>Good day. What are we building?</h2><p>Your systems stay organized. Your job is to execute one useful thing at a time.</p><div class="hero-row"><div class="mini-stat"><b id="overallProgress">0%</b><span>System progress</span></div><div class="mini-stat"><b id="streak">0</b><span>Day streak</span></div><div class="mini-stat"><b id="completedToday">0</b><span>Done today</span></div></div></div>
 <div class="quickbar"><button class="quick" onclick="showView('tasks')"><b>✓</b>Tasks</button><button class="quick" onclick="showView('timeline')"><b>◷</b>Timeline</button><button class="quick" onclick="showView('notes')"><b>✎</b>Capture</button><button class="quick" onclick="installPWA()"><b>＋</b>Install</button></div>
+  <div class="day-mode-box">
+  <div class="day-mode-title">Today's Mode</div>
+
+  <div class="day-mode-buttons">
+    <button class="day-mode-btn" onclick="setDayMode('normal')">
+      🏠 Normal Day
+    </button>
+
+    <button class="day-mode-btn" onclick="setDayMode('school')">
+      🏫 School Day
+    </button>
+
+    <button class="day-mode-btn" onclick="setDayMode('free')">
+      🧠 Free Day
+    </button>
+  </div>
+
+  <div id="activeDayModeText" class="day-mode-status">
+    Current mode: Normal Day
+  </div>
+  </div>
 <div class="searchbox"><input id="searchInput" placeholder="Search PETER systems, modules or tasks…" oninput="searchPETER(this.value)"></div><div class="search-results" id="searchResults"></div>
 <h2>Dashboard</h2><div class="sub">Your systems, roadmap and today's execution.</div><div class="grid" id="dashboard"></div><div class="section-title"><h3>Today</h3><span id="date"></span></div><div class="focus"><h3>⚡ Focus Mode</h3><p>Pick one thing. No switching. Use this when your brain starts jumping between projects.</p><button onclick="startFocus(25)">Start 25 min</button> <button onclick="startFocus(50)">Start 50 min</button><div class="timer" id="timer">25:00</div></div></div>
 <div id="detail" class="view"><div class="back"><button onclick="goHome()">← Dashboard</button></div><h2 id="detailTitle"></h2><div class="sub" id="detailSub"></div><div id="detailHero"></div><div id="roadmap"></div></div>
@@ -841,6 +862,63 @@ function getCurrentAndNextTarget(){
     next
   };
 }
+  function setDayMode(mode){
+
+  activeDayMode = mode;
+
+  localStorage.setItem(
+    'peter_day_mode',
+    mode
+  );
+
+  renderTimeline();
+
+  updateDayModeUI();
+
+  const names = {
+    normal: 'Normal Day',
+    school: 'School Day',
+    free: 'Free Day'
+  };
+
+  peterSpeak(
+    names[mode] + ' activated.'
+  );
+}
+
+
+function updateDayModeUI(){
+
+  const status = document.getElementById('activeDayModeText');
+
+  if(!status) return;
+
+  const names = {
+    normal: 'Normal Day',
+    school: 'School Day',
+    free: 'Free Day'
+  };
+
+  status.textContent =
+    'Current mode: ' +
+    (names[activeDayMode] || 'Normal Day');
+
+
+  document.querySelectorAll('.day-mode-btn')
+    .forEach(button => {
+
+      button.classList.remove('active');
+
+      if(
+        button.getAttribute('onclick') ===
+        `setDayMode('${activeDayMode}')`
+      ){
+        button.classList.add('active');
+      }
+
+    });
+}
+  updateDayModeUI();
 function renderTasks(){$('taskList').innerHTML=data.tasks.map(x=>`<div class="taskbox"><h4>${esc(x.time)} · ${esc(x.title)}</h4><ul>${x.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`).join('')}
 function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('show'));$(id).classList.add('show');window.scrollTo(0,0)}function goHome(){showView('home')}
 function openEdit(){buildEditor();$('editPanel').classList.add('show')}function closeEdit(){$('editPanel').classList.remove('show')}
