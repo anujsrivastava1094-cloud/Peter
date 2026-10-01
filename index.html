@@ -69,12 +69,63 @@ blocks:[
 ['Outdoor Time','Give your eyes time away from close screens.',['Walk outside','Look at distant objects','Relax visual focus'],['Spend some time outdoors when practical and safe.','Do not stare at the sun.']],
 ['Weekly Check','Notice persistent problems early.',['Blur?','Headache?','Eye discomfort?'],['If visual problems persist or interfere with school, tell a parent/guardian and consider an eye-care professional.','PETER is a habit tracker, not a vision diagnosis tool.']]
 ]},
-{id:'school',title:'School Study',icon:'📚',desc:'Classwork, concepts, revision and tests',goal:'Turn school work into a repeatable learning loop.',modules:[
-['Class Capture','Leave class knowing what you do and do not understand.',['Mark doubts','Write key formulas','Record homework'],['At the end of class, mark each topic: clear / partial / doubt.','Do not rewrite everything—capture what matters.']],
-['Concept Revision','Reconstruct the idea without looking.',['Close notes','Explain aloud','Check gaps'],['Study a concept, close the book, then explain it in your own words.','Open the notes only to repair missing pieces.']],
-['Practice','Convert understanding into performance.',['Easy question','Standard question','Challenge question'],['Start with a representative problem.','If stuck, identify the exact step where reasoning broke.']],
-['Weak-Topic Repair','Stop weak chapters from silently growing.',['Find error','Learn missing concept','Retry'],['Maintain a small error list.','Retry the same type after a gap rather than immediately copying the solution.']],
-['Weekly Test','Train retrieval under time pressure.',['Timed set','Check errors','Update plan'],['Test yourself without notes.','Classify mistakes as concept, calculation, reading or time-management errors.']]
+{id:'school',title:'School',icon:'📚',desc:'Your complete school learning system',goal:'Organize every subject, chapter, class, NCERT practice and module in one place.',modules:[
+['⚛️ Physics','Concepts, classes, NCERT and module work.',[
+'Units and Measurements',
+'Chapter 2',
+'Chapter 3',
+'Chapter 4',
+'Chapter 5',
+'Chapter 6',
+],[
+'Start with the chapter in chronological order.',
+'Each chapter will contain Class, NCERT and Module resources.',
+'More chapters will be filled in as we build the School system.'
+]],
+
+['🧪 Chemistry','Concepts, classes, NCERT and module work.',[
+'Chapter 1',
+'Chapter 2',
+'Chapter 3',
+'Chapter 4',
+'Chapter 5'
+],[
+'Chapters will be arranged in your actual school sequence.',
+'Each chapter will eventually contain its own Class, NCERT and Module resources.'
+]],
+
+['📐 Mathematics','Concepts, examples, NCERT and module work.',[
+'Chapter 1',
+'Chapter 2',
+'Chapter 3',
+'Chapter 4',
+'Chapter 5'
+],[
+'Mathematics chapters will be organized chronologically.',
+'Each chapter will receive its own learning resources.'
+]],
+
+['🇬🇧 English','Reading, writing, literature and language practice.',[
+'Chapter 1',
+'Chapter 2',
+'Chapter 3',
+'Chapter 4',
+'Chapter 5'
+],[
+'English chapters and resources will be added according to your actual syllabus.',
+'The same Class → NCERT → Module structure will be used.'
+]],
+
+['🏃 Physical Education','Theory, concepts and revision.',[
+'Chapter 1',
+'Chapter 2',
+'Chapter 3',
+'Chapter 4',
+'Chapter 5'
+],[
+'Physical Education will follow the same organized chapter system.',
+'Resources can be connected as we build each chapter.'
+]]
 ]},
 {id:'jee',title:'JEE Study',icon:'🎯',desc:'PCM concepts, problem solving and revision',goal:'Build a JEE system around concepts, deliberate practice and an error log.',modules:[
 ['Concept Engine','Build the theory required for problem solving.',['Learn concept','Derive/understand','Recall'],['For Physics/Maths, understand why formulas work where possible.','For Chemistry, separate conceptual, factual and problem-solving content.']],
@@ -130,9 +181,6 @@ function renderAll(){renderHome();renderTimeline();renderTasks()}$('editBtn').on
 if('serviceWorker' in navigator && location.protocol==='https:'){navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
   </script>
-<button id="micBtn">🎙️ Talk to PETER</button>
-<button onclick="openSchool()">📚 School</button>
-
 <script>
 function openSchool() {
   document.getElementById("schoolSection").style.display = "block";
