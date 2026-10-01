@@ -219,6 +219,12 @@ tasks:[
   {time:'22:00',title:'Sleep',items:['End the day','Prepare for sleep']}
 ]};
 let saved=localStorage.getItem('peter_v4');let data=saved?JSON.parse(saved):JSON.parse(JSON.stringify(defaultData));
+  // PETER DAY MODE
+let activeDayMode = localStorage.getItem('peter_day_mode') || 'normal';
+
+function getActiveSchedule(){
+  return data.daySchedules?.[activeDayMode] || data.daySchedules?.normal;
+}
 const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));const attr=s=>esc(s);
 function progressFor(b){let total=0,done=0;(b.modules||[]).forEach((m,i)=>{total++;if(localStorage.getItem('peter_done_'+b.id+'_'+i)==='1')done++});return total?Math.round(done/total*100):0}
 function calcOverall(){let total=0,done=0;data.blocks.forEach(b=>(b.modules||[]).forEach((m,i)=>{total++;if(localStorage.getItem('peter_done_'+b.id+'_'+i)==='1')done++}));return total?Math.round(done/total*100):0}
@@ -769,7 +775,72 @@ function toggleModule(i){let el=document.getElementById('mod'+i);el.classList.to
 
   }
 function markModule(id,i,checked){localStorage.setItem('peter_done_'+id+'_'+i,checked?'1':'0');if(checked){touchActivity();let n=+localStorage.getItem('peter_completed_today')||0;localStorage.setItem('peter_completed_today',String(n+1));showToast('Module completed — progress saved.')}let b=data.blocks.find(x=>x.id===id);openDetail(id);renderHome();setTimeout(()=>{let el=document.getElementById('mod'+i);if(el)el.classList.add('open')},0)}
-function renderTimeline(){$('timelineList').innerHTML=data.timeline.map(x=>`<div class="slot"><div class="time">${esc(x.time)}</div><div class="slotbox"><strong>${esc(x.title)}</strong><p>${esc(x.desc)}</p></div></div>`).join('')}
+function renderTimeline(){
+
+  const schedule = getActiveSchedule();
+
+  if(!schedule){
+    $('timelineList').innerHTML = '<p>No schedule available.</p>';
+    return;
+  }
+
+  $('timelineList').innerHTML = schedule.timeline.map((x,i)=>`
+
+    <div class="slot">
+      <div class="time">${esc(x.time)}</div>
+
+      <div class="slotbox">
+        <strong>${esc(x.title)}</strong>
+        <p>${esc(x.desc)}</p>
+      </div>
+    </div>
+
+  `).join('');
+}
+  function timeToMinutes(time){
+
+  const parts = time.split(':').map(Number);
+
+  return parts[0] * 60 + parts[1];
+}
+
+
+function getCurrentAndNextTarget(){
+
+  const schedule = getActiveSchedule();
+
+  if(!schedule || !schedule.timeline){
+    return {current:null,next:null};
+  }
+
+  const now = new Date();
+
+  const currentMinutes =
+    now.getHours() * 60 +
+    now.getMinutes();
+
+  const timeline = [...schedule.timeline].sort(
+    (a,b) => timeToMinutes(a.start) - timeToMinutes(b.start)
+  );
+
+  const current = timeline.find(item => {
+
+    const start = timeToMinutes(item.start);
+    const end = timeToMinutes(item.end);
+
+    return currentMinutes >= start &&
+           currentMinutes < end;
+  });
+
+  const next = timeline.find(item =>
+    timeToMinutes(item.start) > currentMinutes
+  );
+
+  return {
+    current,
+    next
+  };
+}
 function renderTasks(){$('taskList').innerHTML=data.tasks.map(x=>`<div class="taskbox"><h4>${esc(x.time)} · ${esc(x.title)}</h4><ul>${x.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`).join('')}
 function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('show'));$(id).classList.add('show');window.scrollTo(0,0)}function goHome(){showView('home')}
 function openEdit(){buildEditor();$('editPanel').classList.add('show')}function closeEdit(){$('editPanel').classList.remove('show')}
@@ -930,14 +1001,148 @@ function peterSpeak(text) {
 
       return;
     }
-   // TODAY'S TARGET
-   if (
-      command.includes("target today") ||
-      command.includes("today's target") ||
-      command.includes("todays target") ||
-      command.includes("my target today")
-    ) {
+  // DAY MODE — NORMAL
+if(
+  command.includes("normal day") ||
+  command.includes("set normal day")
+){
 
+  activeDayMode = 'normal';
+
+  localStorage.setItem(
+    'peter_day_mode',
+    activeDayMode
+  );
+
+  renderTimeline();
+
+  peterSpeak(
+    "Normal day schedule activated."
+  );
+
+  return;
+}
+
+
+// DAY MODE — SCHOOL
+if(
+  command.includes("school day") ||
+  command.includes("set school day")
+){
+
+  activeDayMode = 'school';
+
+  localStorage.setItem(
+    'peter_day_mode',
+    activeDayMode
+  );
+
+  renderTimeline();
+
+  peterSpeak(
+    "School day schedule activated."
+  );
+
+  return;
+}
+
+
+// DAY MODE — FREE DAY
+if(
+  command.includes("free day") ||
+  command.includes("set free day")
+){
+
+  activeDayMode = 'free';
+
+  localStorage.setItem(
+    'peter_day_mode',
+    activeDayMode
+  );
+
+  renderTimeline();
+
+  peterSpeak(
+    "Free day schedule activated."
+  );
+
+  return;
+  }
+// TODAY'S TARGET
+if (
+  command.includes("target today") ||
+  command.includes("today's target") ||
+  command.includes("todays target") ||
+  command.includes("my target today") ||
+  command.includes("what am i doing") ||
+  command.includes("what should i be doing")
+) {
+
+  const result = getCurrentAndNextTarget();
+  function formatScheduleTime(time){
+
+  const [hour,minute] = time.split(':').map(Number);
+
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+
+  let displayHour = hour % 12;
+
+  if(displayHour === 0){
+    displayHour = 12;
+  }
+
+  if(minute === 0){
+    return displayHour + ' ' + suffix;
+  }
+
+  return displayHour + ':' +
+    String(minute).padStart(2,'0') +
+    ' ' + suffix;
+          }
+
+  const current = result.current;
+  const next = result.next;
+
+  if(current && next){
+
+    peterSpeak(
+      "Right now, you're in " +
+      current.title +
+      ". Your next target is " +
+      next.title +
+      " at " +
+      formatScheduleTime(next.start) +
+      "."
+    );
+
+  }else if(current && !next){
+
+    peterSpeak(
+      "Right now, you're in " +
+      current.title +
+      ". There are no more scheduled targets after this."
+    );
+
+  }else if(!current && next){
+
+    peterSpeak(
+      "You're between scheduled targets. Your next target is " +
+      next.title +
+      " at " +
+      formatScheduleTime(next.start) +
+      "."
+    );
+
+  }else{
+
+    peterSpeak(
+      "You've completed today's schedule."
+    );
+
+  }
+
+  return;
+  } 
   if (data.tasks && data.tasks.length > 0) {
 
     const targets = data.tasks
