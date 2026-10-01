@@ -826,7 +826,7 @@ if (SpeechRecognition) {
       command === "school"
     ) {
 
-      openSchool();
+      openDetail("school");
 
       peterSpeak("Opening School.");
 
@@ -839,7 +839,7 @@ if (SpeechRecognition) {
       command === "home"
     ) {
 
-      gohome();
+      goHome();
 
       peterSpeak("Going home.");
 
@@ -847,7 +847,7 @@ if (SpeechRecognition) {
     }
 
     // UNKNOWN COMMAND
-  { peterSpeak("I don't understand that command yet.");
+    peterSpeak("I don't understand that command yet.");
   }
 
   recognition.onerror = () => {
