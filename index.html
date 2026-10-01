@@ -781,17 +781,31 @@ if (SpeechRecognition) {
 
   speechSynthesis.cancel();
 
+  const voices = speechSynthesis.getVoices();
+
+  // Prefer an English voice
+  const voice =
+    voices.find(v => v.lang === "en-IN") ||
+    voices.find(v => v.lang.startsWith("en-IN")) ||
+    voices.find(v => v.lang.startsWith("en-US")) ||
+    voices.find(v => v.lang.startsWith("en-GB")) ||
+    voices.find(v => v.lang.startsWith("en"));
+
   const speech = new SpeechSynthesisUtterance(text);
 
-  speech.lang = "en-IN";
-  speech.rate = 0.95;
-  speech.pitch = 0.8;
+  if (voice) {
+    speech.voice = voice;
+  }
+
+  speech.lang = voice ? voice.lang : "en-IN";
+  speech.rate = 0.90;
+  speech.pitch = 0.75;
   speech.volume = 1;
 
   speechSynthesis.speak(speech);
 
   speechText.textContent = text;
-  }
+    }
   function peterCore(command) {
 
     command = command.toLowerCase().trim();
