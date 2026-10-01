@@ -762,7 +762,10 @@ if (SpeechRecognition) {
     command = command.toLowerCase().trim();
 
     // TIME
-    if (command.includes("time")) {
+    if (
+    command.includes("time") ||
+    command.includes("what time") 
+    ) {
 
       const now = new Date();
 
@@ -780,12 +783,14 @@ if (SpeechRecognition) {
     // DATE
     if (
       command.includes("date") ||
-      command.includes("today")
+      command.includes("today") ||
+      command.includes("what day")
     ) {
 
       const now = new Date();
 
       const date = now.toLocaleDateString("en-IN", {
+        weekday: "long",
         day: "numeric",
         month: "long",
         year: "numeric"
@@ -817,8 +822,7 @@ if (SpeechRecognition) {
       command === "home"
     ) {
 
-      document.getElementById("schoolSection").style.display =
-        "none";
+      gohome();
 
       speechText.textContent =
         "Going home.";
