@@ -772,7 +772,18 @@ if (SpeechRecognition) {
     peterCore(text);
   };
 
-  function peterSpeak(text) {
+  let peterVoices = [];
+
+function loadPeterVoices() {
+  peterVoices = speechSynthesis.getVoices();
+}
+
+if ("speechSynthesis" in window) {
+  loadPeterVoices();
+  speechSynthesis.onvoiceschanged = loadPeterVoices;
+}
+
+function peterSpeak(text) {
 
   if (!("speechSynthesis" in window)) {
     speechText.textContent = text;
@@ -781,31 +792,34 @@ if (SpeechRecognition) {
 
   speechSynthesis.cancel();
 
-  const voices = speechSynthesis.getVoices();
+  if (peterVoices.length === 0) {
+    peterVoices = speechSynthesis.getVoices();
+  }
 
-  // Prefer an English voice
-  const voice =
-    voices.find(v => v.lang === "en-IN") ||
-    voices.find(v => v.lang.startsWith("en-IN")) ||
-    voices.find(v => v.lang.startsWith("en-US")) ||
-    voices.find(v => v.lang.startsWith("en-GB")) ||
-    voices.find(v => v.lang.startsWith("en"));
+  // Find the best available English voice
+  let voice =
+    peterVoices.find(v => v.lang === "en-IN") ||
+    peterVoices.find(v => v.lang === "en-US") ||
+    peterVoices.find(v => v.lang === "en-GB") ||
+    peterVoices.find(v => v.lang.startsWith("en"));
 
   const speech = new SpeechSynthesisUtterance(text);
 
   if (voice) {
     speech.voice = voice;
+    speech.lang = voice.lang;
+  } else {
+    speech.lang = "en-IN";
   }
 
-  speech.lang = voice ? voice.lang : "en-IN";
-  speech.rate = 0.90;
-  speech.pitch = 0.75;
+  speech.rate = 0.88;
+  speech.pitch = 0.72;
   speech.volume = 1;
 
   speechSynthesis.speak(speech);
 
   speechText.textContent = text;
-    }
+}
   function peterCore(command) {
 
     command = command.toLowerCase().trim();
