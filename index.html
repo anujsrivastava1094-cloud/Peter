@@ -743,10 +743,25 @@ if (SpeechRecognition) {
   recognition.interimResults = false;
 
   micBtn.onclick = () => {
-    recognition.start();
-    speechText.textContent = "Listening...";
-  };
 
+  speechText.textContent = "Starting microphone...";
+
+  try {
+
+    recognition.start();
+
+    speechText.textContent = "Listening...";
+
+  } catch (error) {
+
+    speechText.textContent =
+      "Mic error: " + error.name;
+
+    console.log("PETER mic error:", error);
+
+  }
+
+};
   recognition.onresult = (event) => {
 
     const text =
