@@ -147,6 +147,7 @@ const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if (SpeechRecognition) {
+
   const recognition = new SpeechRecognition();
 
   recognition.lang = "en-IN";
@@ -154,101 +155,108 @@ if (SpeechRecognition) {
   recognition.interimResults = false;
 
   micBtn.onclick = () => {
-  recognition.start();
-  speechText.textContent = "Hummm...";
-};
+    recognition.start();
+    speechText.textContent = "Listening...";
+  };
 
-recognition.onresult = (event) => {
-  const text = event.results[0][0].transcript.toLowerCase();
-  peterCore(transcript);
-  speechText.textContent = "You said: " + text;
+  recognition.onresult = (event) => {
 
-  if (text.includes("what time is it") || text.includes("time")) {
-    const now = new Date();
+    const text =
+      event.results[0][0].transcript.toLowerCase().trim();
 
-    const time = now.toLocaleTimeString("en-IN", {
-      hour: "numeric",
-      minute: "2-digit"
-    });
+    speechText.textContent = "You said: " + text;
 
-    const reply = "The current time is " + time + ".";
+    peterCore(text);
+  };
 
-    speechText.textContent = reply;
+  function peterCore(command) {
 
-    const voice = new SpeechSynthesisUtterance(reply);
-    voice.lang = "en-IN";
-    speechSynthesis.speak(voice);
+    command = command.toLowerCase().trim();
+
+    // TIME
+    if (command.includes("time")) {
+
+      const now = new Date();
+
+      const time = now.toLocaleTimeString("en-IN", {
+        hour: "numeric",
+        minute: "2-digit"
+      });
+
+      speechText.textContent =
+        "The current time is " + time + ".";
+
+      return;
+    }
+
+    // DATE
+    if (
+      command.includes("date") ||
+      command.includes("today")
+    ) {
+
+      const now = new Date();
+
+      const date = now.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
+
+      speechText.textContent =
+        "Today is " + date + ".";
+
+      return;
+    }
+
+    // OPEN SCHOOL
+    if (
+      command.includes("open school") ||
+      command === "school"
+    ) {
+
+      document.getElementById("schoolSection").style.display =
+        "block";
+
+      speechText.textContent =
+        "Opening School.";
+
+      return;
+    }
+
+    // GO HOME
+    if (
+      command.includes("go home") ||
+      command === "home"
+    ) {
+
+      document.getElementById("schoolSection").style.display =
+        "none";
+
+      speechText.textContent =
+        "Going home.";
+
+      return;
+    }
+
+    // UNKNOWN COMMAND
+    speechText.textContent =
+      "I don't understand that command yet.";
   }
-};
 
-function peterCore(command) {
-
-  command = command.toLowerCase().trim();
-
-  // TIME
-  if (command.includes("time")) {
-    const now = new Date();
-
-    const time = now.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-
-    speechText.textContent = "The time is " + time;
-    return;
-  }
-
-  // DATE
-  if (
-    command.includes("date") ||
-    command.includes("today")
-  ) {
-    const now = new Date();
-
-    const date = now.toLocaleDateString([], {
-      day: "numeric",
-      month: "long",
-      year: "numeric"
-    });
-
-    speechText.textContent = "Today is " + date;
-    return;
-  }
-
-  // OPEN SCHOOL
-  if (
-    command.includes("open school") ||
-    command === "school"
-  ) {
-    document.getElementById("schoolSection").style.display = "block";
-
-    speechText.textContent = "Opening School.";
-    return;
-  }
-
-  // GO HOME
-  if (
-    command.includes("go home") ||
-    command === "home"
-  ) {
-    document.getElementById("schoolSection").style.display = "none";
-
-    speechText.textContent = "Going home.";
-    return;
-  }
-
-  // UNKNOWN COMMAND
-  speechText.textContent =
-    "I don't understand that command yet.";
-  }
-  
   recognition.onerror = () => {
-  speechText.textContent = "I couldn't hear that. Try again.";
-};
+    speechText.textContent =
+      "I couldn't hear that. Try again.";
+  };
+
 } else {
-  speechText.textContent = "Voice recognition is not supported.";
+
+  speechText.textContent =
+    "Voice recognition is not supported.";
+
 }
 </script>
+
 <!-- PETER SCHOOL MODULE -->
 
 <section id="schoolSection" style="display:none; padding:20px;">
