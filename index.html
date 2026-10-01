@@ -142,15 +142,81 @@ blocks:[
 ['Earning System','Build a sustainable path.',['Find legitimate opportunities','Communicate clearly','Track work','Improve'],['Avoid “instant money” schemes, paid-to-get-work offers and requests for sensitive account information.','Measure learning and completed work, not only money.']]
 ]}
 ],
-timeline:[
-{time:'06:00',title:'Wake + Start',desc:'Get ready, water, quick reset and choose the day\'s top priorities.'},{time:'07:00',title:'School / Study',desc:'Classes, notes and doubts. Capture what needs later revision.'},{time:'13:30',title:'Lunch + Reset',desc:'Eat, rest and mentally close the morning block.'},{time:'15:00',title:'JEE / School',desc:'One focused academic target. Concepts → problems → error log.'},{time:'17:30',title:'PETER / Skills',desc:'Build one project or skill. No switching between five ideas.'},{time:'19:00',title:'Calisthenics',desc:'Warm-up → planned training → cooldown → record progress.'},{time:'20:00',title:'Dinner + Recovery',desc:'Dinner, family time and recovery.'},{time:'21:00',title:'Revision + Tomorrow',desc:'Review completed work, repair one weak point and prepare tomorrow.'},{time:'22:30',title:'Wind Down',desc:'Reduce stimulation and prepare for sleep.'}],
+daySchedules:{
+
+  normal:{
+    label:'Normal Day',
+    timeline:[
+      {start:'05:00',end:'05:30',time:'5:00 AM – 5:30 AM',title:'Fresh',desc:'Freshen up and get ready for the day.'},
+      {start:'05:30',end:'05:45',time:'5:30 AM – 5:45 AM',title:'Meditation',desc:'Meditation and mental reset.'},
+      {start:'05:45',end:'06:15',time:'5:45 AM – 6:15 AM',title:'Running + Morning Workout',desc:'Running, morning workout and rest.'},
+      {start:'06:15',end:'07:00',time:'6:15 AM – 7:00 AM',title:'Bath + Breakfast',desc:'Take a bath, have breakfast and get ready.'},
+      {start:'07:00',end:'08:00',time:'7:00 AM – 8:00 AM',title:'Revision Session',desc:'Revise previously studied material.'},
+      {start:'08:00',end:'12:00',time:'8:00 AM – 12:00 PM',title:'Study Session 1',desc:'Focused academic study.'},
+      {start:'12:00',end:'13:00',time:'12:00 PM – 1:00 PM',title:'Break + Lunch',desc:'Take a proper break and have lunch.'},
+      {start:'13:00',end:'14:30',time:'1:00 PM – 2:30 PM',title:'Skills',desc:'Work on your current skill or project.'},
+      {start:'14:30',end:'14:45',time:'2:30 PM – 2:45 PM',title:'Pack Lunch + Wash Face',desc:'Pack lunch and wash your face before teaching.'},
+      {start:'14:45',end:'16:00',time:'2:45 PM – 4:00 PM',title:'Teaching Coaching 1',desc:'Teach your coaching session.'},
+      {start:'16:00',end:'16:30',time:'4:00 PM – 4:30 PM',title:'Evening Calisthenics',desc:'Complete the planned evening workout.'},
+      {start:'16:30',end:'17:00',time:'4:30 PM – 5:00 PM',title:'Bath + Ready + Rest',desc:'Bath, get ready and rest.'},
+      {start:'17:00',end:'18:00',time:'5:00 PM – 6:00 PM',title:'Teaching Coaching 2',desc:'Teach your second coaching session.'},
+      {start:'18:00',end:'19:30',time:'6:00 PM – 7:30 PM',title:'Study Session 2',desc:'Focused academic study.'},
+      {start:'19:30',end:'22:00',time:'7:30 PM – 10:00 PM',title:'Dinner + Rest',desc:'Make dinner, eat dinner and rest.'},
+      {start:'22:00',end:'22:01',time:'10:00 PM',title:'Sleep',desc:'End the day and sleep.'}
+    ]
+  },
+
+  school:{
+    label:'School Day',
+    timeline:[
+      {start:'05:00',end:'05:30',time:'5:00 AM – 5:30 AM',title:'Fresh',desc:'Freshen up and get ready for the day.'},
+      {start:'05:30',end:'05:45',time:'5:30 AM – 5:45 AM',title:'Meditation',desc:'Meditation and mental reset.'},
+      {start:'05:45',end:'06:15',time:'5:45 AM – 6:15 AM',title:'Running + Morning Workout',desc:'Running, morning workout and rest.'},
+      {start:'06:15',end:'07:00',time:'6:15 AM – 7:00 AM',title:'Bath + Breakfast',desc:'Take a bath, have breakfast and get ready.'},
+      {start:'07:00',end:'13:00',time:'7:00 AM – 1:00 PM',title:'School',desc:'Attend school and capture important doubts and work.'},
+      {start:'13:00',end:'13:30',time:'1:00 PM – 1:30 PM',title:'Lunch + Rest',desc:'Have lunch and take a short rest.'},
+      {start:'13:30',end:'14:30',time:'1:30 PM – 2:30 PM',title:'Study Session 1',desc:'Focused academic study.'},
+      {start:'14:30',end:'14:45',time:'2:30 PM – 2:45 PM',title:'Pack Lunch + Wash Face',desc:'Pack lunch and wash your face before teaching.'},
+      {start:'14:45',end:'16:00',time:'2:45 PM – 4:00 PM',title:'Teaching Coaching 1',desc:'Teach your coaching session.'},
+      {start:'16:00',end:'16:30',time:'4:00 PM – 4:30 PM',title:'Evening Calisthenics',desc:'Complete the planned evening workout.'},
+      {start:'16:30',end:'17:00',time:'4:30 PM – 5:00 PM',title:'Bath + Ready + Rest',desc:'Bath, get ready and rest.'},
+      {start:'17:00',end:'18:00',time:'5:00 PM – 6:00 PM',title:'Teaching Coaching 2',desc:'Teach your second coaching session.'},
+      {start:'18:00',end:'19:30',time:'6:00 PM – 7:30 PM',title:'Study Session 2',desc:'Focused academic study.'},
+      {start:'19:30',end:'22:00',time:'7:30 PM – 10:00 PM',title:'Dinner + Rest',desc:'Make dinner, eat dinner and rest.'},
+      {start:'22:00',end:'22:01',time:'10:00 PM',title:'Sleep',desc:'End the day and sleep.'}
+    ]
+  },
+
+  free:{
+    label:'Free Day',
+    timeline:[
+      {start:'05:00',end:'05:30',time:'5:00 AM – 5:30 AM',title:'Fresh',desc:'Freshen up and get ready for the day.'},
+      {start:'05:30',end:'05:45',time:'5:30 AM – 5:45 AM',title:'Meditation',desc:'Meditation and mental reset.'},
+      {start:'05:45',end:'06:15',time:'5:45 AM – 6:15 AM',title:'Running + Morning Workout',desc:'Running, morning workout and rest.'},
+      {start:'06:15',end:'07:00',time:'6:15 AM – 7:00 AM',title:'Bath + Breakfast',desc:'Take a bath, have breakfast and get ready.'},
+      {start:'07:00',end:'08:00',time:'7:00 AM – 8:00 AM',title:'Revision Session',desc:'Revise previously studied material.'},
+      {start:'08:00',end:'12:00',time:'8:00 AM – 12:00 PM',title:'Study Session 1',desc:'Focused academic study.'},
+      {start:'12:00',end:'13:00',time:'12:00 PM – 1:00 PM',title:'Break + Lunch',desc:'Take a proper break and have lunch.'},
+      {start:'13:00',end:'16:00',time:'1:00 PM – 4:00 PM',title:'Study Session 2',desc:'Long focused academic study block.'},
+      {start:'16:00',end:'18:00',time:'4:00 PM – 6:00 PM',title:'Skills',desc:'Work on your current skill or project.'},
+      {start:'18:00',end:'19:30',time:'6:00 PM – 7:30 PM',title:'Study Session 3',desc:'Focused academic study.'},
+      {start:'19:30',end:'22:00',time:'7:30 PM – 10:00 PM',title:'Dinner + Rest',desc:'Make dinner, eat dinner and rest.'},
+      {start:'22:00',end:'22:01',time:'10:00 PM',title:'Sleep',desc:'End the day and sleep.'}
+    ]
+  }
+
+},
+
 tasks:[
-{time:'06:00',title:'Wake + Start',items:['Get ready','Drink water','Check the 2 most important tasks','Do not open random apps before starting']},
-{time:'07:00',title:'School / Study',items:['Attend classes actively','Mark doubts instead of ignoring them','Record homework','Write the exact chapter/topic needing revision']},
-{time:'15:00',title:'JEE / School',items:['Choose ONE chapter/topic','20–30 min concept work','Solve a representative set','Log mistakes','Pick the next repair point']},
-{time:'17:30',title:'PETER / Skills',items:['Choose ONE project','Work in 25 or 50 min focus mode','Produce something visible','Save the result','Write the next step before stopping']},
-{time:'19:00',title:'Calisthenics',items:['5–8 min warm-up','20 Mike Tyson pushups if clean','10 archer pushups (5/side) if clean','20 jumping squats with controlled landing','5 chin-ups if clean','Cooldown and note how the session felt']},
-{time:'21:00',title:'Revision + Tomorrow',items:['Check what actually got completed','Review one error/doubt','Move unfinished work deliberately','Choose tomorrow’s top 2 priorities','Prepare study materials']}
+  {time:'05:00',title:'Start the Day',items:['Freshen up','Meditate','Complete the morning physical routine']},
+  {time:'07:00',title:'Revision / School',items:['Follow the scheduled academic block','Capture important doubts','Record anything that needs later revision']},
+  {time:'08:00',title:'Study',items:['Choose the academic target','Focus on the planned subject','Solve problems and record important mistakes']},
+  {time:'13:00',title:'Afternoon Block',items:['Follow the current day schedule','Stay focused on one main target']},
+  {time:'14:45',title:'Teaching Coaching',items:['Prepare before the session','Teach clearly','Note anything that needs improvement']},
+  {time:'16:00',title:'Evening Workout',items:['Complete the planned calisthenics session','Focus on controlled technique','Recover afterward']},
+  {time:'18:00',title:'Study',items:['Complete the planned study block','Review difficult concepts','Prepare the next target']},
+  {time:'19:30',title:'Dinner + Recovery',items:['Make dinner','Eat dinner','Rest and recover']},
+  {time:'22:00',title:'Sleep',items:['End the day','Prepare for sleep']}
 ]};
 let saved=localStorage.getItem('peter_v4');let data=saved?JSON.parse(saved):JSON.parse(JSON.stringify(defaultData));
 const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));const attr=s=>esc(s);
