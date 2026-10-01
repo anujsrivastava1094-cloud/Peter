@@ -178,4 +178,74 @@ recognition.onerror = () => {
 } else {
   speechText.textContent = "Voice recognition is not supported.";
 }
+</script>
+<!-- PETER SCHOOL MODULE -->
+
+<section id="schoolSection" style="display:none; padding:20px;">
+
+  <h1>📚 PETER SCHOOL</h1>
+
+  <p>Select a subject:</p>
+
+  <button onclick="openSubject('Physics')">Physics</button>
+  <button onclick="openSubject('Chemistry')">Chemistry</button>
+  <button onclick="openSubject('Mathematics')">Mathematics</button>
+  <button onclick="openSubject('English')">English</button>
+  <button onclick="openSubject('Physical Education')">
+    Physical Education
+  </button>
+
+  <div id="subjectArea" style="margin-top:20px;"></div>
+
+</section>
+
+<script>
+
+function openSubject(subject) {
+
+  const subjectArea = document.getElementById("subjectArea");
+
+  subjectArea.innerHTML = `
+    <h2>${subject}</h2>
+
+    <h3>Chapters</h3>
+
+    <button onclick="openChapter('${subject}', 'Chapter 1')">
+      Chapter 1
+    </button>
+
+    <button onclick="openChapter('${subject}', 'Chapter 2')">
+      Chapter 2
+    </button>
+
+    <button onclick="openChapter('${subject}', 'Chapter 3')">
+      Chapter 3
+    </button>
+  `;
+}
+
+function openChapter(subject, chapter) {
+
+  const subjectArea = document.getElementById("subjectArea");
+
+  subjectArea.innerHTML = `
+    <h2>${subject}</h2>
+    <h3>${chapter}</h3>
+
+    <hr>
+
+    <h3>🎥 Class</h3>
+    <p>Your class resource will appear here.</p>
+    <button>Open Class</button>
+
+    <h3>📖 NCERT</h3>
+    <p>NCERT exercise will appear here.</p>
+    <button>Solve NCERT Exercise</button>
+
+    <h3>📘 Module</h3>
+    <p>Your module resource will appear here.</p>
+    <button>Open Module</button>
+  `;
+  
+
 </script></body></html>
