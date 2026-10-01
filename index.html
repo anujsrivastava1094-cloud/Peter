@@ -204,7 +204,7 @@ function renderHome(){let cards=data.blocks.map(b=>{let p=progressFor(b);return 
       return `
         <div class="module" id="schoolSubject${i}">
 
-          <button onclick="toggleSchoolSubject(${i})">
+          <button onclick="this.parentElement.classList.toggle('open')">
 
             <span class="num">${i+1}</span>
 
@@ -385,15 +385,6 @@ function renderHome(){let cards=data.blocks.map(b=>{let p=progressFor(b);return 
   showView('detail');
   }
 function toggleModule(i){let el=document.getElementById('mod'+i);el.classList.toggle('open')}
-  function toggleSchoolSubject(i){
-
-  let el=document.getElementById('schoolSubject'+i);
-
-  if(el){
-    el.classList.toggle('open');
-  }
-
-  }
   function openSchoolChapter(subjectName,subjectIndex,chapterIndex){
 
   let school=data.blocks.find(x=>x.id==='school');
