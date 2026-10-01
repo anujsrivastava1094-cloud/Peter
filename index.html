@@ -127,10 +127,18 @@ function searchPETER(q){let box=$('searchResults');q=q.trim().toLowerCase();if(!
 function showToast(msg){let t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
 let deferredPrompt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e});async function installPWA(){if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null}else{showToast('For Home Screen: open PETER from its HTTPS link in Chrome → ⋮ → Add to Home screen.')}}
 function renderAll(){renderHome();renderTimeline();renderTasks()}$('editBtn').onclick=openEdit;renderAll();
-if('serviceWorker' in navigator && location.protocol==='https:'){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+if('serviceWorker' in navigator && location.protocol==='https:'){navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+  </script>
 <button id="micBtn">🎙️ Talk to PETER</button>
+<button onclick="openSchool()">📚 School</button>
+
+<script>
+function openSchool() {
+  document.getElementById("schoolSection").style.display = "block";
+}
 </script>
-</script>
+
 <script>
 const micBtn = document.getElementById("micBtn");
 const speechText = document.getElementById("speechText");
