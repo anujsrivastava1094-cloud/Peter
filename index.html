@@ -944,49 +944,156 @@ function openSchool() {
 
 <script>
 const micBtn = document.getElementById("micBtn");
-  micBtn.textContent = "TEST";
 const speechText = document.getElementById("speechText");
 
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
+
+let peterAwake = false;
+let peterListening = false;
 
 if (SpeechRecognition) {
 
   const recognition = new SpeechRecognition();
 
   recognition.lang = "en-IN";
-  recognition.continuous = false;
+  recognition.continuous = true;
   recognition.interimResults = false;
+
+  micBtn.textContent = "🎙️ Start PETER";
 
   micBtn.onclick = () => {
 
-  speechText.textContent = "Starting microphone...";
+    if (peterListening) {
+      recognition.stop();
+      peterListening = false;
+      peterAwake = false;
 
-  try {
+      micBtn.textContent = "🎙️ Start PETER";
+      speechText.textContent = "PETER is sleeping.";
 
-    recognition.start();
+      return;
+    }
 
-    speechText.textContent = "Listening...";
+    try {
 
-  } catch (error) {
+      recognition.start();
 
-    speechText.textContent =
-      "Mic error: " + error.name;
+      peterListening = true;
+      peterAwake = false;
 
-    console.log("PETER mic error:", error);
+      micBtn.textContent = "🔴 PETER listening";
+      speechText.textContent = 'Say "Peter" to wake me.';
 
-  }
+    } catch (error) {
 
-};
+      speechText.textContent =
+        "Mic error: " + error.name;
+
+      console.log("PETER mic error:", error);
+
+    }
+
+  };
+
   recognition.onresult = (event) => {
 
     const text =
-      event.results[0][0].transcript.toLowerCase().trim();
+      event.results[event.results.length - 1][0]
+        .transcript
+        .toLowerCase()
+        .trim();
 
-    speechText.textContent = "You said: " + text;
+    console.log("PETER heard:", text);
+
+    // WAITING FOR WAKE WORD
+    if (!peterAwake) {
+
+      if (
+        text === "peter" ||
+        text.startsWith("peter ") ||
+        text.includes(" peter ")
+      ) {
+
+        peterAwake = true;
+
+        const command = text
+          .replace(/^peter[\s,]*/i, "")
+          .trim();
+
+        if (command) {
+
+          speechText.textContent =
+            "PETER heard: " + command;
+
+          peterCore(command);
+
+          peterAwake = false;
+
+        } else {
+
+          speechText.textContent =
+            "I'm listening.";
+
+          peterSpeak("I'm listening.");
+
+        }
+
+      }
+
+      return;
+    }
+
+    // PETER IS ALREADY AWAKE
+    speechText.textContent =
+      "You said: " + text;
 
     peterCore(text);
+
+    peterAwake = false;
   };
+
+  recognition.onend = () => {
+
+    if (peterListening) {
+
+      try {
+        recognition.start();
+      } catch (error) {
+        console.log("PETER restart:", error);
+      }
+
+    }
+
+  };
+
+  recognition.onerror = (event) => {
+
+    console.log(
+      "PETER speech error:",
+      event.error
+    );
+
+    if (event.error === "not-allowed") {
+
+      peterListening = false;
+      peterAwake = false;
+
+      micBtn.textContent = "🎙️ Start PETER";
+
+      speechText.textContent =
+        "Microphone permission is required.";
+
+    }
+
+  };
+
+} else {
+
+  speechText.textContent =
+    "Voice recognition is not supported.";
+
+  }
   function peterSpeak(text) {
 
   if (!("speechSynthesis" in window)) {
