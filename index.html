@@ -986,7 +986,7 @@ if (SpeechRecognition) {
 
     peterCore(text);
   };
-function peterSpeak(text) {
+  function peterSpeak(text) {
 
   if (!("speechSynthesis" in window)) {
     speechText.textContent = text;
@@ -1011,6 +1011,26 @@ function peterSpeak(text) {
 
   speechText.textContent = text;
 }
+  function formatScheduleTime(time){
+
+  const [hour,minute] = time.split(':').map(Number);
+
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+
+  let displayHour = hour % 12;
+
+  if(displayHour === 0){
+    displayHour = 12;
+  }
+
+  if(minute === 0){
+    return displayHour + ' ' + suffix;
+  }
+
+  return displayHour + ':' +
+    String(minute).padStart(2,'0') +
+    ' ' + suffix;
+  }
   function peterCore(command) {
 
     command = command.toLowerCase().trim();
@@ -1162,27 +1182,6 @@ if (
 ) {
 
   const result = getCurrentAndNextTarget();
-  function formatScheduleTime(time){
-
-  const [hour,minute] = time.split(':').map(Number);
-
-  const suffix = hour >= 12 ? 'PM' : 'AM';
-
-  let displayHour = hour % 12;
-
-  if(displayHour === 0){
-    displayHour = 12;
-  }
-
-  if(minute === 0){
-    return displayHour + ' ' + suffix;
-  }
-
-  return displayHour + ':' +
-    String(minute).padStart(2,'0') +
-    ' ' + suffix;
-          }
-
   const current = result.current;
   const next = result.next;
 
