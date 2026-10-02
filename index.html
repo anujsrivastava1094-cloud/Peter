@@ -1075,24 +1075,26 @@ function findScheduleTarget(command){
     command = command.toLowerCase().trim();
 
     // TIME
-    if (
-    command.includes("time") ||
-    command.includes("what time") 
-    ) {
+if (
+  command === "time" ||
+  command === "what time is it" ||
+  command === "what time is it right now" ||
+  command === "tell me the time" ||
+  command === "current time"
+) {
 
-      const now = new Date();
+  const now = new Date();
 
-      const time = now.toLocaleTimeString("en-IN", {
-        hour: "numeric",
-        minute: "2-digit"
-      });
+  const time = now.toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit"
+  });
 
-      peterSpeak("The current time is " + time + ".");
+  peterSpeak("The current time is " + time + ".");
 
-      return;
-    }
-
-    // DATE
+  return;
+}
+  // DATE
     if (
       command.includes("date") ||
       command.includes("what date") ||
@@ -1268,6 +1270,8 @@ if (
 if(
   command.includes("how much time is left") ||
   command.includes("how much time is remaining") ||
+  command.includes("how much time remains") ||
+  command.includes("how many minutes are left") ||
   command.includes("time left") ||
   command.includes("time remaining")
 ){
@@ -1278,14 +1282,15 @@ if(
 
     const remaining = getMinutesRemaining(result.current);
 
-    if(remaining <= 0){
-      peterSpeak("This target is ending now.");
-    }else if(remaining === 1){
+    if(remaining <= 1){
+
       peterSpeak(
-        "You have 1 minute left in " +
+        "You have about 1 minute left in " +
         result.current.title + "."
       );
+
     }else{
+
       peterSpeak(
         "You have " +
         remaining +
@@ -1297,16 +1302,18 @@ if(
   }else if(result.next){
 
     peterSpeak(
-      "You're between scheduled targets. " +
+      "You're between scheduled targets. Your next target is " +
       result.next.title +
-      " starts at " +
+      " at " +
       formatScheduleTime(result.next.start) +
       "."
     );
 
   }else{
 
-    peterSpeak("There are no more scheduled targets today.");
+    peterSpeak(
+      "There are no more scheduled targets today."
+    );
   }
 
   return;
@@ -1318,7 +1325,8 @@ if(
   command.includes("what's next") ||
   command.includes("whats next") ||
   command.includes("what is next") ||
-  command.includes("next target")
+  command.includes("next target") ||
+  command.includes("what should i do next")
 ){
 
   const result = getCurrentAndNextTarget();
@@ -1333,6 +1341,131 @@ if(
       "."
     );
 
+  }else{
+
+    peterSpeak(
+      "There are no more scheduled targets today."
+    );
+  }
+
+  return;
+}
+
+
+// WHEN DOES A TARGET START
+if(
+  command.includes("when does") &&
+  command.includes("start")
+){
+
+  const target = findScheduleTarget(command);
+
+  if(target){
+
+    peterSpeak(
+      target.title +
+      " starts at " +
+      formatScheduleTime(target.start) +
+      "."
+    );
+
+  }else{
+
+    peterSpeak(
+      "I couldn't find that target in today's schedule."
+    );
+  }
+
+  return;
+}
+
+
+// HOW LONG IS A TARGET
+if(
+  command.includes("how long is") ||
+  command.includes("how long does") ||
+  command.includes("how long will")
+){
+
+  const target = findScheduleTarget(command);
+
+  if(target){
+
+    const start = timeToMinutes(target.start);
+    const end = timeToMinutes(target.end);
+
+    const duration = end - start;
+
+    if(duration < 60){
+
+      peterSpeak(
+        target.title +
+        " lasts " +
+        duration +
+        " minutes."
+      );
+
+    }else{
+
+      const hours = Math.floor(duration / 60);
+      const minutes = duration % 60;
+
+      if(minutes === 0){
+
+        peterSpeak(
+          target.title +
+          " lasts " +
+          hours +
+          (hours === 1 ? " hour." : " hours.")
+        );
+
+      }else{
+
+        peterSpeak(
+          target.title +
+          " lasts " +
+          hours +
+          (hours === 1 ? " hour " : " hours ") +
+          minutes +
+          " minutes."
+        );
+      }
+    }
+
+  }else{
+
+    peterSpeak(
+      "I couldn't find that target in today's schedule."
+    );
+  }
+
+  return;
+}
+
+
+// SHOW TODAY'S SCHEDULE
+if(
+  command.includes("show today's schedule") ||
+  command.includes("show todays schedule") ||
+  command.includes("show today's timeline") ||
+  command.includes("show todays timeline") ||
+  command.includes("show the schedule") ||
+  command.includes("show today's plan") ||
+  command.includes("show todays plan") ||
+  command.includes("today's schedule") ||
+  command.includes("todays schedule")
+){
+
+  renderTimeline();
+
+  peterSpeak(
+    "Today's " +
+    (data.daySchedules?.[activeDayMode]?.label || "schedule") +
+    " is shown on the dashboard."
+  );
+
+  return;
+}
   }else{
 
     peterSpeak("There are no more scheduled targets today.");
@@ -1417,11 +1550,13 @@ if(
           " minutes."
         );
       }
-    }
+     }
 
   }else{
 
-    peterSpeak("I couldn't find that target in today's schedule.");
+    peterSpeak(
+      "I couldn't find that target in today's schedule."
+    );
   }
 
   return;
@@ -1434,8 +1569,11 @@ if(
   command.includes("show todays schedule") ||
   command.includes("show today's timeline") ||
   command.includes("show todays timeline") ||
-  command.includes("open today's schedule") ||
-  command.includes("open todays schedule")
+  command.includes("show the schedule") ||
+  command.includes("show today's plan") ||
+  command.includes("show todays plan") ||
+  command.includes("today's schedule") ||
+  command.includes("todays schedule")
 ){
 
   renderTimeline();
