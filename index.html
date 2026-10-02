@@ -1619,21 +1619,21 @@ if(
   
     function sendTextCommand(){
 
-     const input = document.getElementById("peterCommandInput");
+  const input = document.getElementById("peterCommandInput");
 
-     if(!input) return;
+  if(!input) return;
 
-      const command = input.value.trim();
+  const command = input.value.trim();
 
-      if(!command) return;
+  if(!command) return;
 
-      input.value = "";
+  input.value = "";
 
-      speechText.textContent =
-       "You typed: " + command;
+  speechText.textContent =
+    "You typed: " + command;
 
-      peterCore(command);
-    }
+  peterCore(command);
+}
 
 document
   .getElementById("peterCommandInput")
