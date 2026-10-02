@@ -14,13 +14,50 @@ h2{margin:5px 0 4px;font-size:28px}.sub{color:var(--muted);font-size:13px;margin
 /* PETER v5 visual layer */
 .topbar{display:flex;gap:8px;align-items:center;margin:0 0 13px}.pill{border:1px solid #2b2b2b;background:#101010;border-radius:999px;padding:7px 10px;font-size:10px;color:#aaa}.pill b{color:#fff}.pill.red{border-color:#4b0b10;color:#ff6970}.hero-dashboard{border:1px solid #3b1014;background:radial-gradient(circle at 85% 10%,#3a080c 0,#160607 35%,#0d0d0d 72%);border-radius:22px;padding:18px;margin-bottom:12px;box-shadow:0 15px 40px #0008}.hero-dashboard .eyebrow{font-size:9px;letter-spacing:2px;color:#ff626a;text-transform:uppercase}.hero-dashboard h2{margin:6px 0;font-size:27px}.hero-dashboard p{margin:0;color:#aaa;font-size:11px;line-height:1.5}.hero-row{display:flex;gap:8px;margin-top:14px}.mini-stat{flex:1;background:#0b0b0b99;border:1px solid #2b2020;border-radius:13px;padding:10px}.mini-stat b{font-size:18px}.mini-stat span{display:block;color:#777;font-size:8px;text-transform:uppercase;margin-top:2px}.quickbar{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0}.quick{border:1px solid #292929;background:#101010;color:#ddd;border-radius:13px;padding:10px 5px;font-size:10px}.quick:active{transform:scale(.97)}.searchbox{display:flex;gap:7px;margin:10px 0}.searchbox input{flex:1;background:#0d0d0d;border:1px solid #292929;color:#fff;border-radius:13px;padding:11px 12px;outline:none}.search-results{display:none;border:1px solid #292929;background:#101010;border-radius:14px;padding:8px;margin-bottom:10px}.search-results.show{display:block}.result{width:100%;border:0;background:none;color:#ddd;text-align:left;padding:10px;border-bottom:1px solid #222}.result:last-child{border:0}.result small{display:block;color:#777;margin-top:3px}.bottomnav{position:sticky;bottom:8px;z-index:8;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:#0b0b0bea;border:1px solid #2c2c2c;border-radius:18px;padding:6px;margin-top:14px;backdrop-filter:blur(12px)}.navbtn{border:0;background:none;color:#888;border-radius:13px;padding:9px 4px;font-size:9px}.navbtn b{display:block;color:#ddd;font-size:16px;margin-bottom:2px}.navbtn.active{background:#24080a;color:#ff6970}.navbtn.active b{color:#ff6970}.module.done{border-color:#2d5b42}.module.done .num{background:#10331f;color:#58e08f}.done-badge{float:right;color:#58e08f;font-size:9px}.note-card{border:1px solid #2b2b2b;background:#101010;border-radius:16px;padding:13px;margin-bottom:10px}.note-card textarea{width:100%;min-height:80px;background:#090909;border:1px solid #252525;color:#fff;border-radius:11px;padding:10px;resize:vertical;outline:none}.note-card button{margin-top:8px;border:1px solid #541017;background:#26080a;color:#fff;border-radius:10px;padding:9px 12px}.install-card{border:1px solid #4a1115;background:linear-gradient(145deg,#190708,#0e0e0e);border-radius:16px;padding:14px;margin:10px 0}.install-card strong{font-size:13px}.install-card p{font-size:10px;color:#999;line-height:1.5;margin:5px 0}.install-card button{border:0;background:var(--red);color:#fff;font-weight:800;border-radius:10px;padding:9px 12px}.toast{position:fixed;left:50%;bottom:25px;transform:translateX(-50%) translateY(20px);background:#f4f4f4;color:#090909;padding:10px 14px;border-radius:12px;font-size:11px;font-weight:700;opacity:0;pointer-events:none;transition:.2s;z-index:50}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media(max-width:520px){.quickbar{grid-template-columns:repeat(2,1fr)}.hero-row{gap:5px}.mini-stat{padding:9px 7px}}
+  .peter-command-box{
+  display:flex;
+  gap:8px;
+  margin:10px 0;
+}
+
+.peter-command-box input{
+  flex:1;
+  background:#0d0d0d;
+  border:1px solid #292929;
+  color:#fff;
+  border-radius:13px;
+  padding:11px 12px;
+  outline:none;
+}
+
+.peter-command-box input:focus{
+  border-color:#541017;
+}
+
+.peter-command-box button{
+  border:1px solid #5c0b10;
+  background:#26080a;
+  color:#fff;
+  border-radius:13px;
+  padding:0 15px;
+  font-weight:700;
+}
 </style></head><body><div class="app">
   <button id="micBtn">🎙️ Talk to PETER</button>
 <p id="speechText">Tap the button and speak.</p>
 <header><div class="brand"><div class="logo">P</div><div><h1>PETER</h1><small>PERSONAL CONTROL SYSTEM</small></div></div><button class="iconbtn" id="editBtn">⚙</button></header>
 <div id="home" class="view show">
 <div class="hero-dashboard"><div class="eyebrow">PETER // COMMAND CENTER</div><h2>Good day. What are we building?</h2><p>Your systems stay organized. Your job is to execute one useful thing at a time.</p><div class="hero-row"><div class="mini-stat"><b id="overallProgress">0%</b><span>System progress</span></div><div class="mini-stat"><b id="streak">0</b><span>Day streak</span></div><div class="mini-stat"><b id="completedToday">0</b><span>Done today</span></div></div></div>
-<div class="quickbar"><button class="quick" onclick="showView('tasks')"><b>✓</b>Tasks</button><button class="quick" onclick="showView('timeline')"><b>◷</b>Timeline</button><button class="quick" onclick="showView('notes')"><b>✎</b>Capture</button><button class="quick" onclick="installPWA()"><b>＋</b>Install</button></div>
+<div class="peter-command-box">
+  <input
+    id="peterCommandInput"
+    type="text"
+    placeholder="Type a command for PETER…"
+    autocomplete="off"
+  >
+  <button onclick="sendTextCommand()">SEND</button>
+</div>
+  <div class="quickbar"><button class="quick" onclick="showView('tasks')"><b>✓</b>Tasks</button><button class="quick" onclick="showView('timeline')"><b>◷</b>Timeline</button><button class="quick" onclick="showView('notes')"><b>✎</b>Capture</button><button class="quick" onclick="installPWA()"><b>＋</b>Install</button></div>
   <div class="day-mode-box">
   <div class="day-mode-title">Today's Mode</div>
 
@@ -1594,6 +1631,33 @@ if(
     "Voice recognition is not supported.";
 
 }
+  function sendTextCommand(){
+
+  const input = document.getElementById("peterCommandInput");
+
+  if(!input) return;
+
+  const command = input.value.trim();
+
+  if(!command) return;
+
+  input.value = "";
+
+  speechText.textContent =
+    "You typed: " + command;
+
+  peterCore(command);
+}
+
+document
+  .getElementById("peterCommandInput")
+  ?.addEventListener("keydown", function(event){
+
+    if(event.key === "Enter"){
+      sendTextCommand();
+    }
+
+  });
 </script>
 
 <!-- PETER SCHOOL MODULE -->
