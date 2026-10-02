@@ -1613,41 +1613,27 @@ if(
 }
     
     // UNKNOWN COMMAND
-    peterSpeak("I don't understand that command yet.");
-     }
+    peterSpeak("I don't understand that command 
+    yet.");
+    }
+  
+    function sendTextCommand(){
 
-  recognition.onerror = (event) => {
+     const input = document.getElementById("peterCommandInput");
 
-  speechText.textContent =
-    "Mic error: " + event.error;
+     if(!input) return;
 
-  console.log("PETER speech error:", event.error);
+      const command = input.value.trim();
 
-};
+      if(!command) return;
 
-} else {
+      input.value = "";
 
-  speechText.textContent =
-    "Voice recognition is not supported.";
+      speechText.textContent =
+       "You typed: " + command;
 
-}
-  function sendTextCommand(){
-
-  const input = document.getElementById("peterCommandInput");
-
-  if(!input) return;
-
-  const command = input.value.trim();
-
-  if(!command) return;
-
-  input.value = "";
-
-  speechText.textContent =
-    "You typed: " + command;
-
-  peterCore(command);
-}
+      peterCore(command);
+    }
 
 document
   .getElementById("peterCommandInput")
