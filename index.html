@@ -1266,32 +1266,6 @@ function peterSpeak(text) {
   speechText.textContent = text;
 
 }
-  
-  function peterSpeak(text) {
-
-  if (!("speechSynthesis" in window)) {
-    speechText.textContent = text;
-    return;
-  }
-
-  speechSynthesis.cancel();
-
-  const speech = new SpeechSynthesisUtterance(text);
-
-  speech.lang = "en-IN";
-
-  // Keep the original voice
-  speech.rate = 1.0;
-
-  // Slightly deeper, but not exaggerated
-  speech.pitch = 0.85;
-
-  speech.volume = 1;
-
-  speechSynthesis.speak(speech);
-
-  speechText.textContent = text;
-}
   function formatScheduleTime(time){
 
   const [hour,minute] = time.split(':').map(Number);
