@@ -1146,14 +1146,19 @@ if(
 
   return;
   }
-// TODAY'S TARGET
+// TODAY'S TARGET / NEXT TARGET
 if (
   command.includes("target today") ||
   command.includes("today's target") ||
   command.includes("todays target") ||
   command.includes("my target today") ||
   command.includes("what am i doing") ||
-  command.includes("what should i be doing")
+  command.includes("what should i be doing") ||
+  command.includes("what's next") ||
+  command.includes("whats next") ||
+  command.includes("what is next") ||
+  command.includes("next target") ||
+  command.includes("what should i do next")
 ) {
 
   const result = getCurrentAndNextTarget();
