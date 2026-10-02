@@ -1477,10 +1477,14 @@ if(
     peterSpeak("I don't understand that command yet.");
      }
 
-  recognition.onerror = () => {
-    speechText.textContent =
-      "I couldn't hear that. Try again.";
-  };
+  recognition.onerror = (event) => {
+
+  speechText.textContent =
+    "Mic error: " + event.error;
+
+  console.log("PETER speech error:", event.error);
+
+};
 
 } else {
 
