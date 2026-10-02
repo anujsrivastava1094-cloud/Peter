@@ -988,13 +988,20 @@ const SpeechRecognition =
 
 let peterAwake = false;
 let peterListening = false;
+let recognition = null;
+let restarting = false;
 
 if (SpeechRecognition) {
 
-  const recognition = new SpeechRecognition();
+  recognition = new SpeechRecognition();
 
   recognition.lang = "en-IN";
-  recognition.continuous = true;
+
+  // IMPORTANT:
+  // One question at a time.
+  recognition.continuous = false;
+
+  // Final result is enough for now.
   recognition.interimResults = false;
 
   micBtn.textContent = "🎙️ Start PETER";
@@ -1002,9 +1009,13 @@ if (SpeechRecognition) {
   micBtn.onclick = () => {
 
     if (peterListening) {
-      recognition.stop();
+
       peterListening = false;
       peterAwake = false;
+
+      try {
+        recognition.stop();
+      } catch (e) {}
 
       micBtn.textContent = "🎙️ Start PETER";
       speechText.textContent = "PETER is sleeping.";
@@ -1024,24 +1035,31 @@ if (SpeechRecognition) {
 
     } catch (error) {
 
-      speechText.textContent =
-        "Mic error: " + error.name;
-
-      console.log("PETER mic error:", error);
+      console.log("PETER mic start:", error);
 
     }
 
   };
 
+
   recognition.onresult = (event) => {
 
+    const result =
+      event.results[event.results.length - 1];
+
+    if (!result.isFinal) return;
+
     const text =
-      event.results[event.results.length - 1][0]
-        .transcript
+      result[0].transcript
         .toLowerCase()
         .trim();
 
     console.log("PETER heard:", text);
+
+    // STOP MIC BEFORE PETER SPEAKS
+    try {
+      recognition.stop();
+    } catch (e) {}
 
     // WAITING FOR WAKE WORD
     if (!peterAwake) {
@@ -1063,9 +1081,10 @@ if (SpeechRecognition) {
           speechText.textContent =
             "PETER heard: " + command;
 
-          peterCore(command);
-
           peterAwake = false;
+
+          // Answer immediately
+          peterCore(command);
 
         } else {
 
@@ -1076,33 +1095,44 @@ if (SpeechRecognition) {
 
         }
 
+      } else {
+
+        // Didn't hear wake word.
+        speechText.textContent =
+          'Say "Peter" to wake me.';
+
+        restartPeterListening();
+
       }
 
       return;
     }
 
+
     // PETER IS ALREADY AWAKE
+
     speechText.textContent =
       "You said: " + text;
 
+    peterAwake = false;
+
+    // Answer immediately
     peterCore(text);
 
-    peterAwake = false;
   };
+
 
   recognition.onend = () => {
 
-    if (peterListening) {
+    console.log("PETER recognition ended.");
 
-      try {
-        recognition.start();
-      } catch (error) {
-        console.log("PETER restart:", error);
-      }
-
+    // Do not restart automatically while PETER is speaking.
+    if (peterListening && !speechSynthesis.speaking) {
+      restartPeterListening();
     }
 
   };
+
 
   recognition.onerror = (event) => {
 
@@ -1125,12 +1155,118 @@ if (SpeechRecognition) {
 
   };
 
+
+  function restartPeterListening() {
+
+    if (!peterListening) return;
+
+    if (speechSynthesis.speaking) return;
+
+    if (restarting) return;
+
+    restarting = true;
+
+    setTimeout(() => {
+
+      restarting = false;
+
+      if (!peterListening) return;
+
+      try {
+
+        recognition.start();
+
+        micBtn.textContent =
+          "🔴 PETER listening";
+
+      } catch (error) {
+
+        console.log(
+          "PETER restart:",
+          error
+        );
+
+      }
+
+    }, 250);
+
+  }
+
+
 } else {
 
   speechText.textContent =
     "Voice recognition is not supported.";
 
+}
+
+
+function peterSpeak(text) {
+
+  if (!("speechSynthesis" in window)) {
+
+    speechText.textContent = text;
+
+    return;
+
   }
+
+  // STOP LISTENING BEFORE SPEAKING
+  if (recognition) {
+
+    try {
+      recognition.stop();
+    } catch (e) {}
+
+  }
+
+  speechSynthesis.cancel();
+
+  const speech =
+    new SpeechSynthesisUtterance(text);
+
+  speech.lang = "en-IN";
+
+  speech.rate = 1.0;
+
+  speech.pitch = 0.85;
+
+  speech.volume = 1;
+
+  speech.onstart = () => {
+
+    micBtn.textContent =
+      "🔊 PETER speaking";
+
+  };
+
+  speech.onend = () => {
+
+    speechText.textContent =
+      text;
+
+    if (peterListening) {
+
+      micBtn.textContent =
+        "🔴 PETER listening";
+
+      restartPeterListening();
+
+    } else {
+
+      micBtn.textContent =
+        "🎙️ Start PETER";
+
+    }
+
+  };
+
+  speechSynthesis.speak(speech);
+
+  speechText.textContent = text;
+
+}
+  
   function peterSpeak(text) {
 
   if (!("speechSynthesis" in window)) {
