@@ -1,4 +1,4 @@
-const CACHE = 'peter-v10';
+const CACHE = 'peter-v11';
 
 const APP_SHELL = [
   './',
