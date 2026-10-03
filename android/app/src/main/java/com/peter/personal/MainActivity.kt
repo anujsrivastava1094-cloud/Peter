@@ -208,6 +208,6 @@ class MainActivity : AppCompatActivity() {
         const val PREFS = "peter_native_voice"
         const val PENDING_COMMAND = "pending_command"
         const val PENDING_WAKE_ONLY = "pending_wake_only"
-        const val PETER_URL = "https://anujsrivastava1094-cloud.github.io/Peter/"
+        const val PETER_URL = "https://anujsrivastava1094-cloud.github.io/Peter/?native=1"
     }
 }
