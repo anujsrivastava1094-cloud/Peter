@@ -1348,19 +1348,115 @@ if (
       return;
     }
 
-    // OPEN SCHOOL
-    if (
-      command.includes("open school") ||
-      command === "school"
-    ) {
+    // SCHOOL
+if (
+  command.includes("open school") ||
+  command === "school"
+) {
+  openPeterSchool();
 
-      openDetail("school");
+  peterSpeak("Opening School.");
 
-      peterSpeak("Opening School.");
+  return;
+}
 
-      return;
-    }
 
+// SCHOOL — PHYSICS
+if (
+  command.includes("physics") &&
+  (
+    command.includes("open") ||
+    command.includes("study") ||
+    command.includes("go to") ||
+    command.includes("take me") ||
+    command === "physics"
+  )
+) {
+  openPeterSchoolSubject("Physics");
+
+  peterSpeak("Opening Physics.");
+
+  return;
+}
+
+
+// SCHOOL — CHEMISTRY
+if (
+  command.includes("chemistry") &&
+  (
+    command.includes("open") ||
+    command.includes("study") ||
+    command.includes("go to") ||
+    command.includes("take me") ||
+    command === "chemistry"
+  )
+) {
+  openPeterSchoolSubject("Chemistry");
+
+  peterSpeak("Opening Chemistry.");
+
+  return;
+}
+
+
+// SCHOOL — MATHEMATICS
+if (
+  (
+    command.includes("mathematics") ||
+    command.includes("maths") ||
+    command.includes("math")
+  ) &&
+  (
+    command.includes("open") ||
+    command.includes("study") ||
+    command.includes("go to") ||
+    command.includes("take me") ||
+    command === "mathematics" ||
+    command === "maths" ||
+    command === "math"
+  )
+) {
+  openPeterSchoolSubject("Mathematics");
+
+  peterSpeak("Opening Mathematics.");
+
+  return;
+}
+
+
+// SCHOOL — ENGLISH
+if (
+  command.includes("english") &&
+  (
+    command.includes("open") ||
+    command.includes("study") ||
+    command.includes("go to") ||
+    command.includes("take me") ||
+    command === "english"
+  )
+) {
+  openPeterSchoolSubject("English");
+
+  peterSpeak("Opening English.");
+
+  return;
+}
+
+
+// SCHOOL — PHYSICAL EDUCATION
+if (
+  (
+    command.includes("physical education") ||
+    command.includes("physical ed") ||
+    command === "pe"
+  )
+) {
+  openPeterSchoolSubject("Physical Education");
+
+  peterSpeak("Opening Physical Education.");
+
+  return;
+}
     // GO HOME
     if (
       command.includes("go home") ||
@@ -1839,7 +1935,22 @@ document
 
 <script>
 
-function openSubject(subject) {
+function openPeterSchool() {
+  document.querySelectorAll(".view").forEach(view => {
+    view.classList.remove("show");
+  });
+
+  document.getElementById("schoolSection").style.display = "block";
+}
+
+
+function openPeterSchoolSubject(subject) {
+  openPeterSchool();
+  openSubject(subject);
+  }
+  
+  
+  function openSubject(subject) {
 
   const subjectArea = document.getElementById("subjectArea");
 
