@@ -85,6 +85,19 @@ class MainActivity : AppCompatActivity() {
         requestRuntimePermissions()
     }
 
+    override fun onStart() {
+        super.onStart()
+        registerReceiver(voiceReceiver, IntentFilter(ACTION_PETER_COMMAND), RECEIVER_NOT_EXPORTED)
+    }
+
+    override fun onStop() {
+        try {
+            unregisterReceiver(voiceReceiver)
+        } catch (_: Exception) {
+        }
+        super.onStop()
+    }
+
     override fun onResume() {
         super.onResume()
         consumePendingCommand()
