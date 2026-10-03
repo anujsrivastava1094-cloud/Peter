@@ -288,8 +288,52 @@ function progressFor(b){let total=0,done=0;(b.modules||[]).forEach((m,i)=>{total
 function calcOverall(){let total=0,done=0;data.blocks.forEach(b=>(b.modules||[]).forEach((m,i)=>{total++;if(localStorage.getItem('peter_done_'+b.id+'_'+i)==='1')done++}));return total?Math.round(done/total*100):0}
 function getStreak(){let d=JSON.parse(localStorage.getItem('peter_activity')||'[]');let set=new Set(d);let n=0;let x=new Date();while(set.has(x.toISOString().slice(0,10))){n++;x.setDate(x.getDate()-1)}return n}
 function touchActivity(){let d=JSON.parse(localStorage.getItem('peter_activity')||'[]');let today=new Date().toISOString().slice(0,10);if(!d.includes(today))d.push(today);localStorage.setItem('peter_activity',JSON.stringify(d.slice(-60)))}
-function renderHome(){let cards=data.blocks.map(b=>{let p=progressFor(b);return `<button class="card" onclick="openDetail('${esc(b.id)}')"><div class="emoji">${b.icon}</div><h3>${esc(b.title)}</h3><p>${esc(b.desc)}</p><div class="progress"><i style="width:${p}%"></i></div></button>`}).join('');$('dashboard').innerHTML=cards+`<button class="card special" onclick="showView('timeline')"><div class="emoji">🗓️</div><div class="meta"><h3>Today's Timeline</h3><p>Full day, from start to wind down.</p></div><div class="arrow">›</div></button><button class="card special" onclick="showView('tasks')"><div class="emoji">✓</div><div class="meta"><h3>Today's Tasks</h3><p>Detailed instructions for each time slot.</p></div><div class="arrow">›</div></button>`;$('date').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});$('overallProgress').textContent=calcOverall()+'%';$('streak').textContent=getStreak();$('completedToday').textContent=JSON.parse(localStorage.getItem('peter_completed_today')||'0');renderNotes();}
+function renderHome(){
+  let cards=data.blocks
+    .filter(b => b.id !== "school")
+    .map(b=>{
+      let p=progressFor(b);
+      return `<button class="card" onclick="openDetail('${esc(b.id)}')">
+        <div class="emoji">${b.icon}</div>
+        <h3>${esc(b.title)}</h3>
+        <p>${esc(b.desc)}</p>
+        <div class="progress"><i style="width:${p}%"></i></div>
+      </button>`;
+    })
+    .join('');
 
+  $('dashboard').innerHTML=cards+`
+    <button class="card special" onclick="showView('timeline')">
+      <div class="emoji">🗓️</div>
+      <div class="meta">
+        <h3>Today's Timeline</h3>
+        <p>Full day, from start to wind down.</p>
+      </div>
+      <div class="arrow">›</div>
+    </button>
+
+    <button class="card special" onclick="showView('tasks')">
+      <div class="emoji">✓</div>
+      <div class="meta">
+        <h3>Today's Tasks</h3>
+        <p>Detailed instructions for each time slot.</p>
+      </div>
+      <div class="arrow">›</div>
+    </button>`;
+
+  $('date').textContent=new Date().toLocaleDateString(undefined,{
+    weekday:'short',
+    day:'numeric',
+    month:'short'
+  });
+
+  $('overallProgress').textContent=calcOverall()+'%';
+  $('streak').textContent=getStreak();
+  $('completedToday').textContent=
+    JSON.parse(localStorage.getItem('peter_completed_today')||'0');
+
+  renderNotes();
+}
 
   function openDetail(id){
 
