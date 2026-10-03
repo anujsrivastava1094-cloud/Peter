@@ -894,6 +894,7 @@ let peterListening = false;
 let recognition = null;
 let restarting = false;
 let peterResponseLanguage = "en";
+let sleepRequested = false;
 
 function peterNormalizeCommand(text){
   let s = (text || "").toLowerCase()
