@@ -568,6 +568,7 @@ function renderHome(){
   showView('detail');
   }
 function openSchoolByVoice(subjectName){
+  peterCurrentSchoolSubject = subjectName;
   openDetail('school');
   const school=data.blocks.find(x=>x.id==='school');
   if(!school)return;
@@ -1140,8 +1141,8 @@ if (SpeechRecognition) {
 
   const speech = new SpeechSynthesisUtterance(text);
 
-  speech.lang = "en-IN";
-  speech.rate = 1.0;
+  speech.lang = peterResponseLanguage === "hi" ? "hi-IN" : "en-IN";
+  speech.rate = 1.08;
   speech.pitch = 0.85;
   speech.volume = 1;
 
@@ -1163,6 +1164,7 @@ if (SpeechRecognition) {
   };
 
   speechSynthesis.speak(speech);
+  try { speechSynthesis.resume(); } catch(e) {}
 
   speechText.textContent = text;
   }
@@ -1225,9 +1227,200 @@ function findScheduleTarget(command){
            title.includes(query);
   });
   }
-  function peterCore(command) {
+  
+let peterCurrentSchoolSubject = "";
+let peterResponseLanguage = "en";
+
+function peterLooksLikeWhatsAppHindi(command){
+  const s = command.toLowerCase();
+  const markers = [
+    "aaj","kal","baje","hu","hoon","hai","kya","kyu","kyon",
+    "mera","meri","mere","mujhe","tum","kaise","kab","kitna",
+    "kitne","nahi","nahin","haan","free","padh","padhu","karu",
+    "karna","krna","chahiye","batao","btao","abhi","wala","wali"
+  ];
+  return markers.filter(x => s.includes(x)).length >= 2;
+}
+
+function peterFormatTimeForWhatsApp(minutes){
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const suffix = h >= 12 ? "PM" : "AM";
+  let display = h % 12;
+  if(display === 0) display = 12;
+  return display + (m ? ":" + String(m).padStart(2,"0") : "") + " " + suffix;
+}
+
+function peterParseSpokenTime(command){
+  const match = command.match(/\\b(1[0-2]|0?[1-9])(?:\\s*[:.]\\s*(\\d{1,2}))?\\s*(am|pm)?\\s*(?:baje|bajay|bajee)?\\b/i);
+  if(!match) return null;
+
+  let hour = Number(match[1]);
+  const minute = match[2] ? Number(match[2]) : 0;
+  const suffix = (match[3] || "").toLowerCase();
+
+  if(suffix === "pm" && hour < 12) hour += 12;
+  if(suffix === "am" && hour === 12) hour = 0;
+
+  // In everyday Hindi/WhatsApp speech, "aaj 5 baje" normally means the
+  // next occurrence of 5 o'clock. If 5 AM has already passed, use 5 PM.
+  if(!suffix && /\\b(aaj|today)\\b/i.test(command)){
+    const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+    let candidate = hour * 60 + minute;
+    if(candidate <= nowMinutes && hour < 12) candidate += 12 * 60;
+    return candidate;
+  }
+
+  return hour * 60 + minute;
+}
+
+function peterCheckFreeAtTime(command){
+  const askedFree =
+    /\\b(free|available|khali|khaali)\\b/i.test(command) &&
+    /(\\bhu\\b|\\bhoon\\b|\\bhai\\b|\\bkya\\b|\\bavailable\\b)/i.test(command);
+
+  if(!askedFree) return false;
+
+  const minutes = peterParseSpokenTime(command);
+  if(minutes === null) return false;
+
+  const schedule = getActiveSchedule();
+  const item = schedule && schedule.timeline
+    ? schedule.timeline.find(x => {
+        const start = timeToMinutes(x.start);
+        const end = timeToMinutes(x.end);
+        return minutes >= start && minutes < end;
+      })
+    : null;
+
+  if(!item){
+    peterSpeak(
+      "Haan, 5 baje ke aas-paas koi scheduled task nahi dikh raha." 
+    );
+    return true;
+  }
+
+  const hindi =
+    "Nahi bhai, " + peterFormatTimeForWhatsApp(minutes) +
+    " se " + formatScheduleTime(item.end) +
+    " tak " + item.title + " hai.";
+
+  peterSpeak(hindi);
+  return true;
+}
+
+function openSchoolChapterByVoice(chapterRequest){
+  const school = data.blocks.find(x => x.id === "school");
+  if(!school) return false;
+
+  let subjectIndex = school.modules.findIndex(
+    x => x[0].toLowerCase() === peterCurrentSchoolSubject.toLowerCase()
+  );
+
+  if(subjectIndex < 0){
+    subjectIndex = school.modules.findIndex(
+      x => x[0].toLowerCase().includes(peterCurrentSchoolSubject.toLowerCase())
+    );
+  }
+
+  if(subjectIndex < 0) return false;
+
+  const chapters = school.modules[subjectIndex][2] || [];
+  const cleaned = chapterRequest
+    .toLowerCase()
+    .replace(/chapter/g,"")
+    .replace(/no\\.?/g,"")
+    .replace(/number/g,"")
+    .trim();
+
+  let chapterIndex = -1;
+
+  const number = cleaned.match(/\\b(\\d{1,2})\\b/);
+  if(number){
+    const n = Number(number[1]);
+    if(n >= 1 && n <= chapters.length) chapterIndex = n - 1;
+  }
+
+  if(chapterIndex < 0){
+    chapterIndex = chapters.findIndex(ch =>
+      cleaned.includes(ch.toLowerCase()) ||
+      ch.toLowerCase().includes(cleaned)
+    );
+  }
+
+  if(chapterIndex < 0) return false;
+
+  openSchoolChapter(school.modules[subjectIndex][0], subjectIndex, chapterIndex);
+  peterResponseLanguage = "en";
+  peterSpeak("Opening " + school.modules[subjectIndex][0] + ", Chapter " + (chapterIndex + 1) + ".");
+  return true;
+}
+
+function peterGenericNavigation(command){
+  const s = command.toLowerCase();
+
+  // 1) Any School chapter can be opened by number/name while its subject is active.
+  if(
+    /\\bchapter\\b/i.test(s) &&
+    peterCurrentSchoolSubject
+  ){
+    if(openSchoolChapterByVoice(s)) return true;
+  }
+
+  // 2) Generic dashboard block navigation. This keeps new PETER blocks voice-accessible
+  // without hard-coding every block name into the voice parser.
+  if(
+    /\\b(open|show|go to|take me to|enter|start|study|work on)\\b/i.test(s)
+  ){
+    const block = data.blocks.find(b => {
+      const title = b.title.toLowerCase();
+      return (
+        s.includes(title) ||
+        (title === "spidy senses" && (s.includes("spidey senses") || s.includes("spidy"))) ||
+        (title === "advanced editing" && s.includes("vfx"))
+      );
+    });
+
+    if(block){
+      openDetail(block.id);
+      peterSpeak("Opening " + block.title + ".");
+      return true;
+    }
+  }
+
+  // 3) If a normal PETER block is currently open, let voice open one of its modules.
+  const currentDetail = document.getElementById("detailTitle");
+  const currentBlock = currentDetail
+    ? data.blocks.find(b => b.title === currentDetail.textContent)
+    : null;
+
+  if(currentBlock){
+    const moduleIndex = currentBlock.modules.findIndex(m => {
+      const title = (m[0] || "").toLowerCase();
+      return title && s.includes(title);
+    });
+
+    if(moduleIndex >= 0){
+      openDetail(currentBlock.id);
+      setTimeout(() => {
+        const el = document.getElementById("mod" + moduleIndex);
+        if(el) el.classList.add("open");
+      }, 80);
+      peterSpeak("Opening " + currentBlock.modules[moduleIndex][0] + ".");
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function peterCore(command) {
 
     command = command.toLowerCase().trim();
+    peterResponseLanguage = peterLooksLikeWhatsAppHindi(command) ? "hi" : "en";
+
+    // Natural WhatsApp/Hinglish time-availability questions.
+    if(peterCheckFreeAtTime(command)) return;
 
     // SLEEP / HANDS-FREE OFF
 if (
@@ -1802,8 +1995,14 @@ if(
   return;
 }
     
-    // UNKNOWN COMMAND
-    peterSpeak("I don't understand that command yet.");
+    // GENERIC VOICE NAVIGATION / FALLBACK
+    if(peterGenericNavigation(command)) return;
+
+    if(peterResponseLanguage === "hi"){
+      peterSpeak("Bhai, ye command abhi PETER ke actions me mapped nahi hai. Main ise bhi add kar sakta hoon.");
+    }else{
+      peterSpeak("I don't understand that command yet.");
+    }
     }
   
     function sendTextCommand() {
