@@ -716,16 +716,21 @@ function toggleModule(i){let el=document.getElementById('mod'+i);el.classList.to
 
   }
   function markSchoolResource(subject,chapter,type,checked){
-  localStorage.setItem(
-    schoolResourceKey(subject,chapter,type),
-    checked?'1':'0'
-  );
+  const key=schoolResourceKey(subject,chapter,type);
+  const wasChecked=localStorage.getItem(key)==='1';
+  localStorage.setItem(key,checked?'1':'0');
 
-  if(checked){
+  /* Count a resource exactly once. Unchecking restores the count instead
+     of leaving today's completion permanently inflated. */
+  if(checked && !wasChecked){
     touchActivity();
     let n=+localStorage.getItem('peter_completed_today')||0;
     localStorage.setItem('peter_completed_today',String(n+1));
     showToast('Progress saved.');
+  }else if(!checked && wasChecked){
+    let n=+localStorage.getItem('peter_completed_today')||0;
+    localStorage.setItem('peter_completed_today',String(Math.max(0,n-1)));
+    showToast('Progress updated.');
   }
 
   const school=data.blocks.find(x=>x.id==='school');
@@ -735,7 +740,27 @@ function toggleModule(i){let el=document.getElementById('mod'+i);el.classList.to
     openSchoolChapter(subject,subjectIndex,chapterIndex);
   }
 }
-function markModule(id,i,checked){localStorage.setItem('peter_done_'+id+'_'+i,checked?'1':'0');if(checked){touchActivity();let n=+localStorage.getItem('peter_completed_today')||0;localStorage.setItem('peter_completed_today',String(n+1));showToast('Module completed — progress saved.')}let b=data.blocks.find(x=>x.id===id);openDetail(id);renderHome();setTimeout(()=>{let el=document.getElementById('mod'+i);if(el)el.classList.add('open')},0)}
+function markModule(id,i,checked){
+  const key='peter_done_'+id+'_'+i;
+  const wasChecked=localStorage.getItem(key)==='1';
+  localStorage.setItem(key,checked?'1':'0');
+
+  /* Keep the daily completion counter consistent with the checkbox state. */
+  if(checked && !wasChecked){
+    touchActivity();
+    let n=+localStorage.getItem('peter_completed_today')||0;
+    localStorage.setItem('peter_completed_today',String(n+1));
+    showToast('Module completed — progress saved.');
+  }else if(!checked && wasChecked){
+    let n=+localStorage.getItem('peter_completed_today')||0;
+    localStorage.setItem('peter_completed_today',String(Math.max(0,n-1)));
+    showToast('Module reopened.');
+  }
+
+  openDetail(id);
+  renderHome();
+  setTimeout(()=>{let el=document.getElementById('mod'+i);if(el)el.classList.add('open')},0);
+}
 function renderTimeline(){
 
   const schedule = getActiveSchedule();
