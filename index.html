@@ -893,282 +893,283 @@ let peterAwake = false;
 let peterListening = false;
 let recognition = null;
 let restarting = false;
+let peterResponseLanguage = "en";
 
-if (SpeechRecognition) {
+function peterNormalizeCommand(text){
+  let s = (text || "").toLowerCase()
+    .replace(/[.,!?;:]/g," ")
+    .replace(/\s+/g," ")
+    .trim();
 
+  // Common Hindi/Hinglish words -> canonical command words.
+  const replacements = [
+    [/\bkhol(?:o|na|do)?\b/g," open "],
+    [/\bdikha(?:o|na|do)?\b/g," show "],
+    [/\ble chalo\b/g," take me to "],
+    [/\ble jao\b/g," take me to "],
+    [/\bwapas\b/g," back "],
+    [/\bghar\b/g," home "],
+    [/\bband karo\b/g," sleep "],
+    [/\bband kr(?:o)?\b/g," sleep "],
+    [/\bso jao\b/g," sleep "],
+    [/\bsojao\b/g," sleep "],
+    [/\bsula do\b/g," sleep "],
+    [/\bsun rahe ho\b/g," are you listening "],
+    [/\bsun rhe ho\b/g," are you listening "],
+    [/\bbatao\b/g," tell me "],
+    [/\bbtao\b/g," tell me "],
+    [/\bkya time hai\b/g," what time is it "],
+    [/\babhi kitna time hai\b/g," what time is it "],
+    [/\baaj ki date\b/g," what date is it "],
+    [/\badhyay\b/g," chapter "],
+    [/\badhyay number\b/g," chapter "],
+    [/\bchapter number\b/g," chapter "],
+    [/\bpaanch\b/g," five "],
+    [/\bpaach\b/g," five "],
+    [/\bchar\b/g," four "],
+    [/\bteen\b/g," three "],
+    [/\bdo\b/g," two "],
+    [/\bek\b/g," one "],
+    [/\bchhe\b/g," six "],
+    [/\bsaat\b/g," seven "],
+    [/\baath\b/g," eight "],
+    [/\bnau\b/g," nine "],
+    [/\bdas\b/g," ten "]
+  ];
+
+  replacements.forEach(([re, value]) => { s = s.replace(re,value); });
+  return s.replace(/\s+/g," ").trim();
+}
+
+function hasWakeWord(text){
+  return /\bpeter\b/i.test(text || "");
+}
+
+function removeWakeWord(text){
+  return (text || "").replace(/\bpeter\b/i,"").trim();
+}
+
+function updatePeterMic(){
+  if(!micBtn) return;
+  if(speechSynthesis.speaking){
+    micBtn.textContent = "🔊 PETER speaking";
+  }else if(peterAwake){
+    micBtn.textContent = "🟢 PETER active";
+  }else if(peterListening){
+    micBtn.textContent = '🎙️ Say "Peter"';
+  }else{
+    micBtn.textContent = "😴 PETER sleeping";
+  }
+}
+
+function restartPeterListening(){
+  if(!peterListening || speechSynthesis.speaking || restarting) return;
+
+  restarting = true;
+
+  setTimeout(() => {
+    restarting = false;
+    if(!peterListening || speechSynthesis.speaking) return;
+
+    try{
+      recognition.start();
+      updatePeterMic();
+    }catch(e){
+      setTimeout(restartPeterListening,180);
+    }
+  },120);
+}
+
+if(SpeechRecognition){
   recognition = new SpeechRecognition();
-
   recognition.lang = "en-IN";
-
-  // IMPORTANT:
-  // One question at a time.
   recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 3;
 
-  // Final result is enough for now.
-  recognition.interimResults = false;
-
-  micBtn.textContent = "🎙️ Start PETER";
+  // If the browser supports contextual phrase biasing, prioritize PETER's vocabulary.
+  try{
+    if("phrases" in recognition && "SpeechRecognitionPhrase" in window){
+      const words = [
+        "Peter","PETER","School","Physics","Chemistry","Mathematics",
+        "Maths","English","Physical Education","Calisthenics",
+        "Editing","Advanced Editing","Spidy Senses","JEE Study",
+        "Chapter","NCERT","Module","Timeline","Task","Notes"
+      ];
+      recognition.phrases = words.map(
+        word => new SpeechRecognitionPhrase(word,8)
+      );
+    }
+  }catch(e){}
 
   micBtn.onclick = () => {
-
-    if (peterListening) {
-
+    if(peterListening){
       peterListening = false;
       peterAwake = false;
-
-      try {
-        recognition.stop();
-      } catch (e) {}
-
-      micBtn.textContent = "🎙️ Start PETER";
+      restarting = false;
+      try{ recognition.abort(); }catch(e){}
+      try{ speechSynthesis.cancel(); }catch(e){}
+      updatePeterMic();
       speechText.textContent = "PETER is sleeping.";
-
       return;
     }
 
-    try {
+    peterListening = true;
+    peterAwake = false;
+    updatePeterMic();
+    speechText.textContent = 'Listening for "Peter"...';
 
-      recognition.start();
-
-      peterListening = true;
-      peterAwake = false;
-
-      micBtn.textContent = "🔴 PETER listening";
-      speechText.textContent = 'Say "Peter" to wake me.';
-
-    } catch (error) {
-
-      console.log("PETER mic start:", error);
-
-    }
-
+    try{ recognition.start(); }catch(e){}
   };
 
+  recognition.onstart = () => {
+    updatePeterMic();
+  };
 
   recognition.onresult = (event) => {
+    let finalText = "";
 
-    const result =
-      event.results[event.results.length - 1];
+    for(let i=event.resultIndex;i<event.results.length;i++){
+      const result=event.results[i];
+      if(result.isFinal){
+        finalText += " " + (result[0]?.transcript || "");
+      }
+    }
 
-    if (!result.isFinal) return;
+    finalText = finalText.trim();
+    if(!finalText) return;
 
-    const text =
-      result[0].transcript
-        .toLowerCase()
-        .trim();
+    const heard = peterNormalizeCommand(finalText);
+    console.log("PETER heard:",heard);
 
-    console.log("PETER heard:", text);
-
-    // STOP MIC BEFORE PETER SPEAKS
-    try {
-      recognition.stop();
-    } catch (e) {}
-
-    // WAITING FOR WAKE WORD
-    if (!peterAwake) {
-
-      if (
-        text === "peter" ||
-        text.startsWith("peter ") ||
-        text.includes(" peter ")
-      ) {
-
-        peterAwake = true;
-
-        const command = text
-          .replace(/^peter[\s,]*/i, "")
-          .trim();
-
-        if (command) {
-
-          speechText.textContent =
-            "PETER heard: " + command;
-
-          // Stay active after the wake phrase.
-          peterAwake = true;
-
-          // Answer immediately, then listen for the next command.
-          peterCore(command);
-
-        } else {
-
-          speechText.textContent =
-            "I'm listening.";
-
-        peterAwake = true;
-
-          peterSpeak("I'm listening.");
-
-        }
-
-      } else {
-
-        // Didn't hear wake word.
-        speechText.textContent =
-          'Say "Peter" to wake me.';
-
-        restartPeterListening();
-
+    if(!peterAwake){
+      if(!hasWakeWord(heard)){
+        speechText.textContent='Waiting for "Peter"...';
+        return;
       }
 
+      peterAwake=true;
+      const command=peterNormalizeCommand(removeWakeWord(heard));
+
+      if(command){
+        speechText.textContent="You said: "+command;
+        peterCore(command);
+      }else{
+        peterSpeak("I'm listening.");
+      }
       return;
     }
 
-
-    // PETER IS ALREADY AWAKE
-
-    speechText.textContent =
-      "You said: " + text;
-
-    // Stay active until the user explicitly asks PETER to sleep.
-    peterAwake = true;
-
-    // Answer immediately, then listen for the next command.
-    peterCore(text);
-
+    speechText.textContent="You said: "+heard;
+    peterCore(heard);
   };
-
 
   recognition.onend = () => {
-
-    console.log("PETER recognition ended.");
-
-    // Do not restart automatically while PETER is speaking.
-    if (peterListening && !speechSynthesis.speaking) {
+    if(peterListening && !speechSynthesis.speaking){
       restartPeterListening();
     }
-
   };
-
 
   recognition.onerror = (event) => {
+    console.log("PETER speech error:",event.error);
 
-    console.log(
-      "PETER speech error:",
-      event.error
-    );
-
-    if (event.error === "not-allowed") {
-
-      peterListening = false;
-      peterAwake = false;
-
-      micBtn.textContent = "🎙️ Start PETER";
-
-      speechText.textContent =
-        "Microphone permission is required.";
-
+    if(event.error==="not-allowed" || event.error==="service-not-allowed"){
+      peterListening=false;
+      peterAwake=false;
+      updatePeterMic();
+      speechText.textContent="Microphone permission is required. Tap PETER once and allow it.";
+      return;
     }
 
+    if(peterListening && !speechSynthesis.speaking){
+      restartPeterListening();
+    }
   };
 
-
-  function restartPeterListening() {
-
-    if (!peterListening) return;
-
-    if (speechSynthesis.speaking) return;
-
-    if (restarting) return;
-
-    restarting = true;
-
-    setTimeout(() => {
-
-      restarting = false;
-
-      if (!peterListening) return;
-
-      try {
-
-        recognition.start();
-
-        micBtn.textContent =
-          "🔴 PETER listening";
-
-      } catch (error) {
-
-        console.log(
-          "PETER restart:",
-          error
-        );
-
-      }
-
-    }, 600);
-
-  }
-
-  // Try to arm hands-free listening automatically when the page opens.
-  // Some browsers require a one-time user gesture for microphone access.
-  window.addEventListener("load", () => {
-    setTimeout(() => {
-      if (!peterListening) {
-        try {
-          recognition.start();
-          peterListening = true;
-          peterAwake = false;
-          micBtn.textContent = "🔴 PETER listening";
-          speechText.textContent = 'Listening for "Peter"...';
-        } catch (e) {
-          console.log("PETER auto-start:", e);
-        }
-      }
-    }, 700);
+  window.addEventListener("load",()=>{
+    setTimeout(()=>{
+      peterListening=true;
+      peterAwake=false;
+      updatePeterMic();
+      try{ recognition.start(); }catch(e){}
+    },500);
   });
-
-
-} else {
-
-  speechText.textContent =
-    "Voice recognition is not supported.";
-
+}else{
+  micBtn.textContent="🎙️ Voice unavailable";
+  speechText.textContent="Voice recognition is not supported in this browser.";
 }
-  function peterSpeak(text) {
 
-  if (!("speechSynthesis" in window)) {
-    speechText.textContent = text;
+function peterSpeak(text){
+  if(!("speechSynthesis" in window)){
+    speechText.textContent=text;
     return;
   }
 
-  if (recognition) {
-    try {
-      recognition.stop();
-    } catch (e) {}
-  }
-
+  try{ recognition && recognition.abort(); }catch(e){}
   speechSynthesis.cancel();
 
-  const speech = new SpeechSynthesisUtterance(text);
+  const speech=new SpeechSynthesisUtterance(String(text));
 
-  speech.lang = peterResponseLanguage === "hi" ? "hi-IN" : "en-IN";
-  speech.rate = 1.08;
-  speech.pitch = 0.85;
-  speech.volume = 1;
+  // PETER speaks English for now, even when the user gives a Hindi/Hinglish command.
+  // Hindi response mode can be added later without changing command recognition.
+  speech.lang="en-IN";
+  speech.rate=1.12;
+  speech.pitch=0.72;
+  speech.volume=1;
 
-  speech.onstart = () => {
-    micBtn.textContent = "🔊 PETER speaking";
+  const voices=speechSynthesis.getVoices();
+  const malePreferred=[
+    "Google UK English Male",
+    "Google US English Male",
+    "Microsoft David",
+    "Microsoft George",
+    "Daniel",
+    "Rishi"
+  ];
+
+  let voice=voices.find(v =>
+    malePreferred.some(name => v.name.toLowerCase().includes(name.toLowerCase()))
+  );
+
+  if(!voice){
+    voice=voices.find(v =>
+      /male|man|david|george|daniel|rishi/i.test(v.name) &&
+      /^en/i.test(v.lang)
+    );
+  }
+
+  if(!voice){
+    voice=voices.find(v => /^en-IN/i.test(v.lang)) ||
+          voices.find(v => /^en/i.test(v.lang));
+  }
+
+  if(voice) speech.voice=voice;
+
+  speech.onstart=()=>updatePeterMic();
+
+  speech.onend=()=>{
+    speechText.textContent=String(text);
+    updatePeterMic();
+
+    // Very short restart gap: PETER becomes ready almost immediately.
+    if(peterListening && !sleepRequested){
+      setTimeout(restartPeterListening,50);
+    }
   };
 
-  speech.onend = () => {
-
-    speechText.textContent = text;
-
-    if (peterListening) {
-      micBtn.textContent = "🔴 PETER listening";
-      restartPeterListening();
-    } else {
-      micBtn.textContent = "🎙️ Start PETER";
+  speech.onerror=()=>{
+    updatePeterMic();
+    if(peterListening && !sleepRequested){
+      setTimeout(restartPeterListening,50);
     }
-
   };
 
   speechSynthesis.speak(speech);
-  try { speechSynthesis.resume(); } catch(e) {}
+  try{ speechSynthesis.resume(); }catch(e){}
+  speechText.textContent=String(text);
+}
 
-  speechText.textContent = text;
-  }
-  function formatScheduleTime(time){
+function formatScheduleTime(time){
 
   const [hour,minute] = time.split(':').map(Number);
 
@@ -1416,8 +1417,8 @@ function peterGenericNavigation(command){
 
 function peterCore(command) {
 
-    command = command.toLowerCase().trim();
-    peterResponseLanguage = peterLooksLikeWhatsAppHindi(command) ? "hi" : "en";
+    command = peterNormalizeCommand(command).trim();
+    peterResponseLanguage = "en";
 
     // Natural WhatsApp/Hinglish time-availability questions.
     if(peterCheckFreeAtTime(command)) return;
