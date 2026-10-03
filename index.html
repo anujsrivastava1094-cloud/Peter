@@ -1601,6 +1601,61 @@ function peterAutomationCommand(s){
     return true;
   }
 
+  /* Relative reminders: "remind me in 5 minutes" / "save this and remind me in 5 minutes". */
+  const relativeReminder=s.match(/\b(?:remind me|reminder)\s+(?:in|after)\s+(\d+)\s*(?:minute|minutes|min|mins)\b/);
+  if(relativeReminder){
+    const mins=Number(relativeReminder[1]);
+    let body=s
+      .replace(/\b(?:save it|save this|remember this)\b/g," ")
+      .replace(/\b(?:remind me|reminder)\s+(?:in|after)\s+\d+\s*(?:minute|minutes|min|mins)\b/g," ")
+      .replace(/\s+/g," ").trim();
+    const when=Date.now()+mins*60000;
+    const item=peterAddReminder(body||("reminder in "+mins+" minutes"),when,0);
+    peterRequestNotifications();
+    peterSpeak("Okay. I will remind you in "+mins+" minutes.");
+    return true;
+  }
+
+  /* Timer status/cancellation. */
+  if(/\b(?:how much time|how long).*(?:timer|left)\b|\btime left.*\btimer\b/.test(s)){
+    const timers=peterLoadJson(PETER_TIMERS_KEY).filter(x=>!x.done);
+    if(!timers.length){peterSpeak("There are no active timers.");return true;}
+    const left=timers.map(function(t){
+      const sec=Math.max(0,Math.ceil((t.ends-Date.now())/1000));
+      const mm=Math.floor(sec/60), ss=sec%60;
+      return mm+" minute"+(mm===1?"":"s")+" "+ss+" seconds";
+    });
+    peterSpeak("You have "+left.join(", ")+" remaining.");
+    return true;
+  }
+  if(/\b(?:cancel|stop|delete)\b.*\btimer\b/.test(s)){
+    const timers=peterLoadJson(PETER_TIMERS_KEY);
+    let active=timers.filter(x=>!x.done);
+    if(!active.length){peterSpeak("There are no active timers.");return true;}
+    active.forEach(function(t){clearTimeout(peterTimerIntervals[t.id]);t.done=true;});
+    peterSaveJson(PETER_TIMERS_KEY,timers);
+    peterSpeak("Active timers cancelled.");
+    return true;
+  }
+
+  /* Reminder status/cancellation. */
+  if(/\b(?:list|show|what are).*(?:reminders|reminder)\b/.test(s)){
+    const reminders=peterLoadJson(PETER_REMINDERS_KEY).filter(x=>!x.done);
+    if(!reminders.length){peterSpeak("You have no active reminders.");return true;}
+    const summary=reminders.slice(0,3).map(x=>x.text+" at "+peterFormatDateTime(x.remindAt)).join(". ");
+    peterSpeak("Your active reminders are: "+summary+".");
+    return true;
+  }
+  if(/\b(?:cancel|delete|remove)\b.*\b(?:reminder|reminders)\b/.test(s)){
+    const reminders=peterLoadJson(PETER_REMINDERS_KEY);
+    const active=reminders.filter(x=>!x.done);
+    if(!active.length){peterSpeak("There are no active reminders.");return true;}
+    active.forEach(x=>x.done=true);
+    peterSaveJson(PETER_REMINDERS_KEY,reminders);
+    peterSpeak("Active reminders cancelled.");
+    return true;
+  }
+
   /* Timer: "3 minute timer", "timer for 3 minutes", "3 min ka timer". */
   const timerMinutes=peterParseDurationMinutes(s);
   if(timerMinutes && /\btimer\b/.test(s)){
@@ -1672,6 +1727,15 @@ function peterProcessCommand(command){
 
   if(peterCheckFreeAtTime(s)) return;
 
+  /* System status. */
+  if(/\b(?:peter\s+)?(?:status|system status|system check|health check)\b/.test(s)){
+    const timers=peterLoadJson(PETER_TIMERS_KEY).filter(x=>!x.done).length;
+    const reminders=peterLoadJson(PETER_REMINDERS_KEY).filter(x=>!x.done).length;
+    const mode=peterAwake?"awake and listening":"standby";
+    peterSpeak("PETER is "+mode+". I have "+timers+" active timer"+(timers===1?"":"s")+" and "+reminders+" active reminder"+(reminders===1?"":"s")+".");
+    return;
+  }
+
   /* Time. */
   if(s==="time" || /\bwhat time is it\b|\btell me the time\b|\bcurrent time\b/.test(s)){
     const now=new Date();
@@ -1692,6 +1756,7 @@ function peterProcessCommand(command){
     sleepRequested=true;
     peterListening=false;
     try{recognition && recognition.abort();}catch(e){}
+    closePeterVoiceMode();
     peterSpeak("Going to sleep.");
     return;
   }
@@ -1847,6 +1912,7 @@ if(SpeechRecognition){
       }
       peterAwake=true;
       sleepRequested=false;
+      if(!peterVoiceMode) openPeterVoiceMode();
       const command=peterNormalizeCommand(peterStripWakeWord(heard));
       if(command){
         speechText.textContent="You said: "+command;
