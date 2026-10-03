@@ -1004,8 +1004,7 @@ if(SpeechRecognition){
     }
   }catch(e){}
 
-  micBtn.onclick = () => {
-    // If PETER is already running, this button puts it to sleep.
+  micBtn.onclick = async () => {
     if(peterListening && recognitionRunning){
       peterListening = false;
       peterAwake = false;
@@ -1017,19 +1016,55 @@ if(SpeechRecognition){
       return;
     }
 
-    // Start/retry the microphone. This also fixes the case where autoplay
-    // tried to start recognition before Android/Chrome granted microphone access.
+    if(!window.isSecureContext){
+      speechText.textContent = "PETER voice needs HTTPS. Open the GitHub Pages PETER link in Chrome.";
+      updatePeterMic();
+      return;
+    }
+
     peterListening = true;
     peterAwake = false;
     restarting = false;
     updatePeterMic();
-    speechText.textContent = 'Starting microphone… allow microphone access if Chrome asks.';
+    speechText.textContent = "Requesting microphone access…";
+
+    // Explicitly request Android/Chrome microphone permission from this tap.
+    // This is more reliable than asking SpeechRecognition to request it by itself.
+    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        stream.getTracks().forEach(track => track.stop());
+        speechText.textContent = 'Microphone ready. Say "Peter"...';
+      }catch(e){
+        peterListening = false;
+        peterAwake = false;
+        updatePeterMic();
+        speechText.textContent =
+          e.name === "NotAllowedError"
+            ? "Microphone permission was denied. Chrome site settings → Microphone → Allow, then try again."
+            : "Could not access the microphone. Check Chrome microphone permission and try again.";
+        console.log("PETER microphone permission:", e);
+        return;
+      }
+    }else{
+      speechText.textContent = "This browser does not provide microphone access.";
+      peterListening = false;
+      updatePeterMic();
+      return;
+    }
 
     try{
       recognition.start();
     }catch(e){
-      speechText.textContent = "Tap Allow for microphone access, then tap PETER again.";
-      console.log("PETER manual microphone start:", e);
+      // Android Chrome can briefly report that recognition is already starting.
+      setTimeout(()=>{
+        if(peterListening && !recognitionRunning){
+          try{ recognition.start(); }catch(err){
+            speechText.textContent = "PETER could not start voice recognition. Reload PETER and try again.";
+            console.log("PETER recognition retry:",err);
+          }
+        }
+      },300);
     }
   };
 
