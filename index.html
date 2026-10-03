@@ -1415,6 +1415,21 @@ function peterGenericNavigation(command){
    ========================= */
 let peterVoiceMode=false;
 window.peterNativeMode = new URLSearchParams(location.search).get("native")==="1";
+if(window.peterNativeMode){
+  window.addEventListener("DOMContentLoaded",function(){
+    const mic=document.getElementById("micBtn");
+    if(mic){
+      mic.onclick=async function(){
+        peterListening=true;
+        peterAwake=true;
+        sleepRequested=false;
+        speechText.textContent="PETER native voice service is active. Say "Peter" followed by your command.";
+        updatePeterMic();
+        try{ await openPeterVoiceMode(); }catch(e){}
+      };
+    }
+  });
+}
 let peterAudioStream=null;
 let peterAudioContext=null;
 let peterAudioAnalyser=null;
