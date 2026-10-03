@@ -1410,57 +1410,127 @@ function openSchoolChapterByVoice(chapterRequest){
   return true;
 }
 
-function peterGenericNavigation(command){
-  const s = command.toLowerCase();
+function peterCommandScore(query, target){
+  const q = peterNormalizeCommand(query);
+  const t = peterNormalizeCommand(target);
+  if(!q || !t) return 0;
+  if(q === t) return 100;
+  if(q.includes(t)) return 85;
+  if(t.includes(q)) return 80;
 
-  // 1) Any School chapter can be opened by number/name while its subject is active.
-  if(
-    /\\bchapter\\b/i.test(s) &&
-    peterCurrentSchoolSubject
-  ){
+  const a = new Set(q.split(/\\s+/).filter(Boolean));
+  const b = new Set(t.split(/\\s+/).filter(Boolean));
+  let common = 0;
+  b.forEach(x => { if(a.has(x)) common++; });
+  return common ? Math.round((common / Math.max(a.size,b.size)) * 70) : 0;
+}
+
+function peterGenericNavigation(command){
+  const s = peterNormalizeCommand(command);
+
+  // Universal navigation aliases.
+  if(/\\b(back|go back|previous|pichhe|peeche|wapas)\\b/.test(s)){
+    goHome();
+    peterSpeak("Going back.");
+    return true;
+  }
+
+  if(/\\b(home|dashboard|main screen|main page|ghar)\\b/.test(s) &&
+     !/\\b(open school|school day)\\b/.test(s)){
+    goHome();
+    peterSpeak("Going home.");
+    return true;
+  }
+
+  if(/\\b(tasks?|today tasks?|todays tasks?|today's tasks?|my tasks?)\\b/.test(s)){
+    showView("tasks");
+    peterSpeak("Opening today's tasks.");
+    return true;
+  }
+
+  if(/\\b(timeline|today timeline|today's timeline|schedule|today schedule|plan for today)\\b/.test(s)){
+    showView("timeline");
+    peterSpeak("Opening today's timeline.");
+    return true;
+  }
+
+  if(/\\b(notes?|quick notes?|capture|my notes?)\\b/.test(s)){
+    showView("notes");
+    peterSpeak("Opening notes.");
+    return true;
+  }
+
+  if(/\\b(focus|focus mode|focus timer|start focus)\\b/.test(s)){
+    startFocus(25);
+    peterSpeak("Starting focus mode.");
+    return true;
+  }
+
+  if(/\\b(edit mode|settings|edit peter)\\b/.test(s)){
+    openEdit();
+    peterSpeak("Opening edit mode.");
+    return true;
+  }
+
+  // Any School chapter, including number words, while a subject is active.
+  if(/\\bchapter\\b/.test(s) && peterCurrentSchoolSubject){
     if(openSchoolChapterByVoice(s)) return true;
   }
 
-  // 2) Generic dashboard block navigation. This keeps new PETER blocks voice-accessible
-  // without hard-coding every block name into the voice parser.
-  if(
-    /\\b(open|show|go to|take me to|enter|start|study|work on)\\b/i.test(s)
-  ){
-    const block = data.blocks.find(b => {
-      const title = b.title.toLowerCase();
-      return (
-        s.includes(title) ||
-        (title === "spidy senses" && (s.includes("spidey senses") || s.includes("spidy"))) ||
-        (title === "advanced editing" && s.includes("vfx"))
-      );
-    });
+  // Generic dashboard block navigation. A block can be referred to by
+  // its exact title, a common alias, or by a natural "open/show/study" phrase.
+  const aliases = {
+    "calisthenics":["calisthenics","workout","exercise","training"],
+    "editing":["editing","video editing","edit"],
+    "advanced editing":["advanced editing","vfx","cgi","cgi vfx","advanced edit"],
+    "spidy senses":["spidy senses","spidey senses","spider senses","senses"],
+    "improve eyesight":["improve eyesight","eyesight","eye training","eyes"],
+    "school":["school","school study","school plan"],
+    "jee study":["jee study","jee","jee preparation","jee plan"],
+    "peter":["peter","peter system","peter project"]
+  };
 
-    if(block){
-      openDetail(block.id);
-      peterSpeak("Opening " + block.title + ".");
-      return true;
-    }
+  const actionWords=/\\b(open|show|go to|take me to|enter|start|study|work on|load|view|see|check|go)\\b/;
+  const shouldOpen = actionWords.test(s);
+
+  let best=null;
+  (data.blocks||[]).forEach(block=>{
+    const names=[block.title,...(aliases[block.title.toLowerCase()]||[])];
+    let score=0;
+    names.forEach(name=>{
+      score=Math.max(score,peterCommandScore(s,name));
+      if(s.includes(peterNormalizeCommand(name))) score=Math.max(score,90);
+    });
+    if(score> (best?.score||0)) best={block,score};
+  });
+
+  if(best && (shouldOpen || best.score>=80)){
+    openDetail(best.block.id);
+    peterSpeak("Opening " + best.block.title + ".");
+    return true;
   }
 
-  // 3) If a normal PETER block is currently open, let voice open one of its modules.
-  const currentDetail = document.getElementById("detailTitle");
-  const currentBlock = currentDetail
-    ? data.blocks.find(b => b.title === currentDetail.textContent)
+  // If a normal PETER block is already open, match its module with
+  // tolerant word matching so speech recognition does not need exact wording.
+  const currentDetail=document.getElementById("detailTitle");
+  const currentBlock=currentDetail
+    ? (data.blocks||[]).find(b => peterNormalizeCommand(b.title)===peterNormalizeCommand(currentDetail.textContent))
     : null;
 
   if(currentBlock){
-    const moduleIndex = currentBlock.modules.findIndex(m => {
-      const title = (m[0] || "").toLowerCase();
-      return title && s.includes(title);
+    let bestModule=-1, bestScore=0;
+    currentBlock.modules.forEach((m,i)=>{
+      const score=peterCommandScore(s,m[0]||"");
+      if(score>bestScore){bestScore=score;bestModule=i;}
     });
 
-    if(moduleIndex >= 0){
+    if(bestModule>=0 && bestScore>=55){
       openDetail(currentBlock.id);
-      setTimeout(() => {
-        const el = document.getElementById("mod" + moduleIndex);
+      setTimeout(()=>{
+        const el=document.getElementById("mod"+bestModule);
         if(el) el.classList.add("open");
-      }, 80);
-      peterSpeak("Opening " + currentBlock.modules[moduleIndex][0] + ".");
+      },50);
+      peterSpeak("Opening " + currentBlock.modules[bestModule][0] + ".");
       return true;
     }
   }
