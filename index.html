@@ -921,6 +921,11 @@ function peterNormalizeCommand(text){
     [/\bgo\s+sleep\b/g, " sleep "],
     [/\bstop\s+listening\b/g, " sleep "],
     [/\bsleeping\s+time\b/g, " sleep "],
+    [/\b(?:ruk|ruko|ruk\s+jao|bas|chup|chup\s+karo)\b/g, " stop "],
+    [/\bband\s+(?:karo|kar\s+do|kr\s+do)\b/g, " stop "],
+    [/\blaga\s+do\b/g, " set "],
+    [/\blagao\b/g, " set "],
+    [/\byaad\s+dila\s+(?:dena|do|de)\b/g, " remind me "],
     [/\ble\s+(?:mujhe|me)\s+(?:school|physics|chemistry|mathematics|maths|english)\b/g, " open school "],
     [/\ble\s+chalo\b/g, " take me to "],
     [/\ble\s+jao\b/g, " take me to "],
@@ -1457,17 +1462,14 @@ function peterParseSaveReminder(s){
   return body ? {body:body,lead:leadMinutes}:null;
 }
 function peterAutomationCommand(s){
-  /* Immediate stop: no speech, no delayed restart. */
-  if(/\b(?:peter\s+)?stop\s+peter\b|\bstop\s+peter\b/.test(s)){
-    peterAwake=false;
-    peterListening=false;
-    sleepRequested=true;
-    peterVoiceBusy=false;
-    clearTimeout(peterRestartTimer);
+  /* "Peter stop" means STOP SPEAKING only. PETER stays awake. */
+  if(/^\s*(?:peter\s+)?stop(?:\s+peter)?\s*$/.test(s) ||
+     /^\s*stop\s+peter\s*$/.test(s)){
     try{speechSynthesis.cancel();}catch(e){}
-    try{recognition && recognition.abort();}catch(e){}
+    peterVoiceBusy=false;
+    speechText.textContent="PETER stopped speaking. I'm listening.";
     updatePeterMic();
-    speechText.textContent="PETER stopped.";
+    if(peterListening && !sleepRequested) peterRestartListening(50);
     return true;
   }
 
@@ -1615,23 +1617,24 @@ document.getElementById("peterCommandInput")?.addEventListener("keydown",functio
 if(SpeechRecognition){
   recognition=new SpeechRecognition();
 
-  /* One utterance at a time is more reliable on Android than keeping a
-     continuous recognition session alive. PETER immediately starts the next
-     utterance after processing/speaking, so the user still gets hands-free
-     operation. */
-  recognition.lang="en-IN";
-  recognition.continuous=false;
+  /* PETER v9 voice engine:
+     Hindi/Hinglish-first recognition, continuous recovery, many alternatives,
+     and live interruption while PETER is speaking. */
+  recognition.lang="hi-IN";
+  recognition.continuous=true;
   recognition.interimResults=false;
-  recognition.maxAlternatives=5;
+  recognition.maxAlternatives=10;
 
   try{
     if("phrases" in recognition && "SpeechRecognitionPhrase" in window){
       const words=[
-        "Peter","PETER","School","Physics","Chemistry","Mathematics","Maths",
-        "English","Physical Education","Calisthenics","Workout","Editing",
-        "Advanced Editing","VFX","CGI","Spidy Senses","Spidey Senses",
-        "Improve Eyesight","JEE Study","Chapter","NCERT","Module","Timeline",
-        "Tasks","Notes","Focus","Normal Day","School Day","Free Day"
+        "Peter","PETER","stop Peter","Peter stop","School","Physics","Chemistry",
+        "Mathematics","Maths","English","Physical Education","Calisthenics",
+        "Workout","Editing","Advanced Editing","VFX","CGI","Spidy Senses",
+        "Spidey Senses","Improve Eyesight","JEE Study","Chapter","NCERT","Module",
+        "Timeline","Schedule","Tasks","Notes","Focus","Normal Day","School Day",
+        "Free Day","timer","reminder","remind me","save this","take a note",
+        "what time is it","what date is it","go home","go back"
       ];
       recognition.phrases=words.map(function(w){return new SpeechRecognitionPhrase(w,10);});
     }
@@ -1675,14 +1678,15 @@ if(SpeechRecognition){
         return;
       }
     }
-
-    peterRestartListening(80);
+    peterRestartListening(50);
   };
 
   recognition.onstart=function(){
     recognitionRunning=true;
     recognitionStarting=false;
-    speechText.textContent=peterAwake ? "PETER is listening." : 'Listening for "Peter"...';
+    speechText.textContent=peterVoiceBusy
+      ? "PETER speaking — listening for stop."
+      : (peterAwake ? "PETER is listening." : 'Listening for "Peter"...');
     updatePeterMic();
   };
 
@@ -1694,6 +1698,19 @@ if(SpeechRecognition){
 
     const heard=peterNormalizeCommand(transcript);
     console.log("PETER heard:",heard);
+
+    /* While speaking, ONLY an explicit stop is accepted. */
+    if(peterVoiceBusy){
+      if(/^\s*(?:peter\s+)?stop(?:\s+peter)?\s*$/i.test(heard) ||
+         /^\s*stop\s+peter\s*$/i.test(heard)){
+        try{speechSynthesis.cancel();}catch(e){}
+        peterVoiceBusy=false;
+        speechText.textContent="PETER stopped speaking. I'm listening.";
+        updatePeterMic();
+        if(peterListening && !sleepRequested) peterRestartListening(50);
+      }
+      return;
+    }
 
     if(!peterAwake){
       if(!hasWakeWord(heard)){
@@ -1720,8 +1737,8 @@ if(SpeechRecognition){
     recognitionRunning=false;
     recognitionStarting=false;
     updatePeterMic();
-    if(peterListening && !sleepRequested && !peterVoiceBusy){
-      peterRestartListening(160);
+    if(peterListening && !sleepRequested){
+      peterRestartListening(peterVoiceBusy ? 80 : 120);
     }
   };
 
@@ -1739,8 +1756,8 @@ if(SpeechRecognition){
       return;
     }
 
-    if(peterListening && !sleepRequested && !peterVoiceBusy){
-      peterRestartListening(event.error==="no-speech" ? 120 : 350);
+    if(peterListening && !sleepRequested){
+      peterRestartListening(event.error==="no-speech" ? 80 : 220);
     }
   };
 
@@ -1748,25 +1765,23 @@ if(SpeechRecognition){
   micBtn.textContent="🎙️ Voice unavailable";
   speechText.textContent="Voice recognition is not supported in this browser.";
 }
-
 function peterSpeak(text){
   const spoken=String(text||"");
   speechText.textContent=spoken;
 
   if(!("speechSynthesis" in window)){
-    if(peterListening && !sleepRequested) peterRestartListening(100);
+    if(peterListening && !sleepRequested) peterRestartListening(50);
     return;
   }
 
-  try{recognition && recognition.abort();}catch(e){}
+  /* Keep recognition alive while speaking so "Peter stop" can interrupt. */
   speechSynthesis.cancel();
-
   peterVoiceBusy=true;
   updatePeterMic();
 
   const speech=new SpeechSynthesisUtterance(spoken);
   speech.lang="en-IN";
-  speech.rate=1.08;
+  speech.rate=1.05;
   speech.pitch=0.72;
   speech.volume=1;
 
@@ -1775,7 +1790,6 @@ function peterSpeak(text){
     "Google UK English Male","Google US English Male","Microsoft David",
     "Microsoft George","Daniel","Rishi"
   ];
-
   let voice=voices.find(function(v){
     return preferred.some(function(name){return v.name.toLowerCase().includes(name.toLowerCase());});
   });
@@ -1789,12 +1803,12 @@ function peterSpeak(text){
   speech.onend=function(){
     peterVoiceBusy=false;
     updatePeterMic();
-    if(peterListening && !sleepRequested) peterRestartListening(100);
+    if(peterListening && !sleepRequested) peterRestartListening(50);
   };
   speech.onerror=function(){
     peterVoiceBusy=false;
     updatePeterMic();
-    if(peterListening && !sleepRequested) peterRestartListening(100);
+    if(peterListening && !sleepRequested) peterRestartListening(50);
   };
 
   speechSynthesis.speak(speech);
@@ -1803,15 +1817,24 @@ function peterSpeak(text){
 
 window.addEventListener("load",function(){
   peterRestoreReminders();
-  if("Notification" in window && Notification.permission==="default"){
-    // Permission is requested only after a reminder is actually created.
-  }
-
   peterListening=false;
   peterAwake=false;
   sleepRequested=false;
   peterVoiceBusy=false;
   updatePeterMic();
+
+  /* Auto-start the ears. If Android requires a first permission gesture,
+     the microphone button remains the fallback. */
+  if(SpeechRecognition && window.isSecureContext){
+    setTimeout(function(){
+      try{
+        peterListening=true;
+        sleepRequested=false;
+        updatePeterMic();
+        peterRestartListening(300);
+      }catch(e){}
+    },700);
+  }
 });
 </script>
 
