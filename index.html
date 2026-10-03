@@ -1414,6 +1414,7 @@ function peterGenericNavigation(command){
    Full-screen red reactive orb. Audio visualization is local to the device.
    ========================= */
 let peterVoiceMode=false;
+window.peterNativeMode = new URLSearchParams(location.search).get("native")==="1";
 let peterAudioStream=null;
 let peterAudioContext=null;
 let peterAudioAnalyser=null;
@@ -1441,7 +1442,7 @@ async function openPeterVoiceMode(){
   if(o){o.classList.add("show");o.setAttribute("aria-hidden","false");}
   peterSetVoiceOverlayState("PETER LISTENING");
   try{
-    if(!peterAudioStream && navigator.mediaDevices?.getUserMedia){
+    if(!window.peterNativeMode && !peterAudioStream && navigator.mediaDevices?.getUserMedia){
       peterAudioStream=await navigator.mediaDevices.getUserMedia({audio:true});
       peterAudioContext=new (window.AudioContext||window.webkitAudioContext)();
       const source=peterAudioContext.createMediaStreamSource(peterAudioStream);
@@ -1858,7 +1859,7 @@ if(SpeechRecognition){
     speechText.textContent='Microphone ready. Say "Peter"...';
     updatePeterMic();
 
-    if(navigator.mediaDevices?.getUserMedia){
+    if(!window.peterNativeMode && navigator.mediaDevices?.getUserMedia){
       try{
         const stream=await navigator.mediaDevices.getUserMedia({audio:true});
         stream.getTracks().forEach(function(t){t.stop();});
