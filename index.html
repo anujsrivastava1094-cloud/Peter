@@ -1676,7 +1676,42 @@ if(
 }
 
 
-// SHOW TODAY'S SCHEDULE
+// SHOW TODAY'S TASKS
+if(
+  command.includes("show my tasks") ||
+  command.includes("show today's tasks") ||
+  command.includes("show todays tasks") ||
+  command.includes("what are my tasks") ||
+  command === "tasks" ||
+  command === "today's tasks"
+){
+  showView("tasks");
+
+  peterSpeak(
+    "Here are today's tasks."
+  );
+
+  return;
+}
+
+
+// SHOW TODAY'S TIMELINE
+if(
+  command.includes("show timeline") ||
+  command.includes("open timeline") ||
+  command.includes("show today's timeline") ||
+  command.includes("show todays timeline") ||
+  command === "timeline"
+){
+  showView("timeline");
+
+  peterSpeak(
+    "Opening today's timeline."
+  );
+
+  return;
+  }
+    // SHOW TODAY'S SCHEDULE
 if(
   command.includes("show today's schedule") ||
   command.includes("show todays schedule") ||
