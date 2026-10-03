@@ -883,6 +883,12 @@ function openSchool() {
 </script>
 
 <script>
+/* =========================
+   PETER VOICE ENGINE v10
+   Mobile-first, Hinglish-tolerant,
+   wake-word + persistent command loop.
+   ========================= */
+
 const micBtn = document.getElementById("micBtn");
 const speechText = document.getElementById("speechText");
 
@@ -892,68 +898,108 @@ const SpeechRecognition =
 let peterAwake = false;
 let peterListening = false;
 let recognition = null;
-let restarting = false;
 let recognitionRunning = false;
-let peterResponseLanguage = "en";
+let recognitionStarting = false;
+let peterRestartTimer = null;
 let sleepRequested = false;
+let peterResponseLanguage = "en";
+let peterVoiceBusy = false;
 
 function peterNormalizeCommand(text){
-  let s = (text || "").toLowerCase()
-    .replace(/[.,!?;:]/g," ")
-    .replace(/\s+/g," ")
+  let s = String(text || "")
+    .toLowerCase()
+    .replace(/[.,!?;:()[\]{}]/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 
-  // Common Hindi/Hinglish words -> canonical command words.
-  const replacements = [
-    [/\bkhol(?:o|na|do)?\b/g," open "],
-    [/\bdikha(?:o|na|do)?\b/g," show "],
-    [/\ble chalo\b/g," take me to "],
-    [/\ble jao\b/g," take me to "],
-    [/\bwapas\b/g," back "],
-    [/\bghar\b/g," home "],
-    [/\bband karo\b/g," sleep "],
-    [/\bband kr(?:o)?\b/g," sleep "],
-    [/\bso jao\b/g," sleep "],
-    [/\bsojao\b/g," sleep "],
-    [/\bsula do\b/g," sleep "],
-    [/\bsun rahe ho\b/g," are you listening "],
-    [/\bsun rhe ho\b/g," are you listening "],
-    [/\bbatao\b/g," tell me "],
-    [/\bbtao\b/g," tell me "],
-    [/\bkya time hai\b/g," what time is it "],
-    [/\babhi kitna time hai\b/g," what time is it "],
-    [/\baaj ki date\b/g," what date is it "],
-    [/\badhyay\b/g," chapter "],
-    [/\badhyay number\b/g," chapter "],
-    [/\bchapter number\b/g," chapter "],
-    [/\bpaanch\b/g," five "],
-    [/\bpaach\b/g," five "],
-    [/\bchar\b/g," four "],
-    [/\bteen\b/g," three "],
-    [/\bdo\b/g," two "],
-    [/\bek\b/g," one "],
-    [/\bchhe\b/g," six "],
-    [/\bsaat\b/g," seven "],
-    [/\baath\b/g," eight "],
-    [/\bnau\b/g," nine "],
-    [/\bdas\b/g," ten "]
+  /* Multi-word phrases first. */
+  const phrases = [
+    [/\bband\s+(?:kar|karo|kr|krdo|do)\b/g, " sleep "],
+    [/\bso\s+(?:jao|ja)\b/g, " sleep "],
+    [/\bsula\s+do\b/g, " sleep "],
+    [/\bgo\s+to\s+sleep\b/g, " sleep "],
+    [/\bgo\s+sleep\b/g, " sleep "],
+    [/\bstop\s+listening\b/g, " sleep "],
+    [/\bsleeping\s+time\b/g, " sleep "],
+    [/\ble\s+(?:mujhe|me)\s+(?:school|physics|chemistry|mathematics|maths|english)\b/g, " open school "],
+    [/\ble\s+chalo\b/g, " take me to "],
+    [/\ble\s+jao\b/g, " take me to "],
+    [/\btake\s+me\s+back\b/g, " back "],
+    [/\bgo\s+back\b/g, " back "],
+    [/\bwapas\s+(?:le|jao|chalo)?\b/g, " back "],
+    [/\bpichhe\s+(?:jao|chalo)?\b/g, " back "],
+    [/\bpeeche\s+(?:jao|chalo)?\b/g, " back "],
+    [/\bkya\s+time\s+hai\b/g, " what time is it "],
+    [/\babhi\s+kitna\s+time\s+hai\b/g, " what time is it "],
+    [/\baaj\s+ki\s+date\b/g, " what date is it "],
+    [/\baaj\s+ka\s+schedule\b/g, " show today's schedule "],
+    [/\baaj\s+ki\s+timeline\b/g, " show today's timeline "],
+    [/\baaj\s+ke\s+tasks?\b/g, " show today's tasks "],
+    [/\bsun\s+rahe\s+ho\b/g, " are you listening "],
+    [/\bsun\s+rhe\s+ho\b/g, " are you listening "],
+    [/\bbtao\b/g, " tell me "],
+    [/\bbatao\b/g, " tell me "],
+    [/\bdikha\s+do\b/g, " show "],
+    [/\bdikhao\b/g, " show "],
+    [/\bkhol\s+do\b/g, " open "],
+    [/\bkholna\b/g, " open "],
+    [/\bkholो\b/g, " open "],
+    [/\badhyay\s+number\b/g, " chapter "],
+    [/\bchapter\s+number\b/g, " chapter "],
+    [/\bkitne\s+minute\s+(?:bache|baaki)\s+hain\b/g, " how much time is left "],
+    [/\bkitna\s+time\s+(?:bacha|baaki)\s+hai\b/g, " how much time is left "],
+    [/\bmain\s+(?:aaj\s+)?kya\s+karu\b/g, " what should i do today "],
+    [/\bab\s+kya\s+karu\b/g, " what should i do next "],
+    [/\bnext\s+kya\s+hai\b/g, " what's next "],
+    [/\bfree\s+hoon\b/g, " free "],
+    [/\bfree\s+hu\b/g, " free "],
+    [/\bkhaali\s+hoon\b/g, " free "],
+    [/\bkhaali\s+hu\b/g, " free "]
   ];
+  phrases.forEach(function(pair){ s = s.replace(pair[0], pair[1]); });
 
-  replacements.forEach(([re, value]) => { s = s.replace(re,value); });
-  return s.replace(/\s+/g," ").trim();
+  /* Single-word aliases. Token boundaries prevent words like "do" inside
+     another word from being changed. */
+  const words = [
+    [/\bkhol(?:o|do)?\b/g, " open "],
+    [/\bdikha(?:o|do)?\b/g, " show "],
+    [/\bkholo\b/g, " open "],
+    [/\bwapas\b/g, " back "],
+    [/\bghar\b/g, " home "],
+    [/\bband\b/g, " sleep "],
+    [/\bsojao\b/g, " sleep "],
+    [/\bbaje\b/g, " "],
+    [/\badhyay\b/g, " chapter "],
+    [/\bpaanch\b/g, " five "],
+    [/\bpaach\b/g, " five "],
+    [/\bchar\b/g, " four "],
+    [/\bteen\b/g, " three "],
+    [/\bdo\b/g, " two "],
+    [/\bek\b/g, " one "],
+    [/\bchhe\b/g, " six "],
+    [/\bcheh\b/g, " six "],
+    [/\bsaat\b/g, " seven "],
+    [/\baath\b/g, " eight "],
+    [/\baath\b/g, " eight "],
+    [/\bnau\b/g, " nine "],
+    [/\bdas\b/g, " ten "]
+  ];
+  words.forEach(function(pair){ s = s.replace(pair[0], pair[1]); });
+
+  return s.replace(/\s+/g, " ").trim();
+}
+
+function peterStripWakeWord(text){
+  return String(text || "").replace(/\bpeter\b/ig, " ").replace(/\s+/g, " ").trim();
 }
 
 function hasWakeWord(text){
-  return /\bpeter\b/i.test(text || "");
-}
-
-function removeWakeWord(text){
-  return (text || "").replace(/\bpeter\b/i,"").trim();
+  return /\bpeter\b/i.test(String(text || ""));
 }
 
 function updatePeterMic(){
   if(!micBtn) return;
-  if(speechSynthesis.speaking){
+  if(peterVoiceBusy || (window.speechSynthesis && speechSynthesis.speaking)){
     micBtn.textContent = "🔊 PETER speaking";
   }else if(peterAwake){
     micBtn.textContent = "🟢 PETER active";
@@ -964,573 +1010,340 @@ function updatePeterMic(){
   }
 }
 
-function restartPeterListening(){
-  if(!peterListening || speechSynthesis.speaking || restarting) return;
-
-  restarting = true;
-
-  setTimeout(() => {
-    restarting = false;
-    if(!peterListening || speechSynthesis.speaking) return;
-
+function peterRestartListening(delay){
+  delay = typeof delay === "number" ? delay : 180;
+  if(!peterListening || sleepRequested || peterVoiceBusy || recognitionStarting || recognitionRunning) return;
+  clearTimeout(peterRestartTimer);
+  peterRestartTimer = setTimeout(function(){
+    if(!peterListening || sleepRequested || peterVoiceBusy || recognitionRunning) return;
     try{
+      recognitionStarting = true;
       recognition.start();
-      updatePeterMic();
     }catch(e){
-      setTimeout(restartPeterListening,180);
+      recognitionStarting = false;
+      setTimeout(function(){ peterRestartListening(250); }, 250);
     }
-  },120);
+  }, delay);
 }
 
-if(SpeechRecognition){
-  recognition = new SpeechRecognition();
-  recognition.lang = "en-IN";
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 3;
+/* Commands PETER actually knows. Used to choose the best of Chrome's
+   alternative transcripts instead of blindly taking alternative #1. */
+const PETER_VOCABULARY = [
+  "peter","open school","school","physics","chemistry","mathematics","maths",
+  "english","physical education","calisthenics","workout","exercise",
+  "editing","video editing","advanced editing","vfx","cgi","spidy senses",
+  "spidey senses","improve eyesight","eyesight","jee study","jee",
+  "timeline","schedule","tasks","today tasks","notes","quick notes",
+  "focus","focus mode","home","dashboard","back","go back","sleep",
+  "what time is it","what date is it","what's next","next target",
+  "what should i do today","what should i do next","how much time is left",
+  "normal day","school day","free day","are you listening","what can you do",
+  "edit mode","settings","capture","save note","chapter","ncert","module"
+];
 
-  // If the browser supports contextual phrase biasing, prioritize PETER's vocabulary.
-  try{
-    if("phrases" in recognition && "SpeechRecognitionPhrase" in window){
-      const words = [
-        "Peter","PETER","School","Physics","Chemistry","Mathematics",
-        "Maths","English","Physical Education","Calisthenics",
-        "Editing","Advanced Editing","Spidy Senses","JEE Study",
-        "Chapter","NCERT","Module","Timeline","Task","Notes"
-      ];
-      recognition.phrases = words.map(
-        word => new SpeechRecognitionPhrase(word,8)
-      );
-    }
-  }catch(e){}
+function peterSpeechScore(text){
+  const s = peterNormalizeCommand(text);
+  if(!s) return -999;
 
-  micBtn.onclick = async () => {
-    if(peterListening && recognitionRunning){
-      peterListening = false;
-      peterAwake = false;
-      restarting = false;
-      try{ recognition.abort(); }catch(e){}
-      try{ speechSynthesis.cancel(); }catch(e){}
-      updatePeterMic();
-      speechText.textContent = "PETER is sleeping.";
-      return;
-    }
-
-    if(!window.isSecureContext){
-      speechText.textContent = "PETER voice needs HTTPS. Open the GitHub Pages PETER link in Chrome.";
-      updatePeterMic();
-      return;
-    }
-
-    peterListening = true;
-    peterAwake = false;
-    restarting = false;
-    updatePeterMic();
-    speechText.textContent = "Requesting microphone access…";
-
-    // Explicitly request Android/Chrome microphone permission from this tap.
-    // This is more reliable than asking SpeechRecognition to request it by itself.
-    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-      try{
-        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-        stream.getTracks().forEach(track => track.stop());
-        speechText.textContent = 'Microphone ready. Say "Peter"...';
-      }catch(e){
-        peterListening = false;
-        peterAwake = false;
-        updatePeterMic();
-        speechText.textContent =
-          e.name === "NotAllowedError"
-            ? "Microphone permission was denied. Chrome site settings → Microphone → Allow, then try again."
-            : "Could not access the microphone. Check Chrome microphone permission and try again.";
-        console.log("PETER microphone permission:", e);
-        return;
-      }
-    }else{
-      speechText.textContent = "This browser does not provide microphone access.";
-      peterListening = false;
-      updatePeterMic();
-      return;
-    }
-
-    try{
-      recognition.start();
-    }catch(e){
-      // Android Chrome can briefly report that recognition is already starting.
-      setTimeout(()=>{
-        if(peterListening && !recognitionRunning){
-          try{ recognition.start(); }catch(err){
-            speechText.textContent = "PETER could not start voice recognition. Reload PETER and try again.";
-            console.log("PETER recognition retry:",err);
-          }
-        }
-      },300);
-    }
-  };
-
-  recognition.onstart = () => {
-    recognitionRunning = true;
-    speechText.textContent = peterAwake ? "PETER is listening." : 'Listening for "Peter"...';
-    updatePeterMic();
-  };
-
-  recognition.onresult = (event) => {
-    let finalText = "";
-
-    for(let i=event.resultIndex;i<event.results.length;i++){
-      const result=event.results[i];
-      if(result.isFinal){
-        finalText += " " + (result[0]?.transcript || "");
-      }
-    }
-
-    finalText = finalText.trim();
-    if(!finalText) return;
-
-    const heard = peterNormalizeCommand(finalText);
-    console.log("PETER heard:",heard);
-
-    if(!peterAwake){
-      if(!hasWakeWord(heard)){
-        speechText.textContent='Waiting for "Peter"...';
-        return;
-      }
-
-      peterAwake=true;
-      const command=peterNormalizeCommand(removeWakeWord(heard));
-
-      if(command){
-        speechText.textContent="You said: "+command;
-        peterCore(command);
-      }else{
-        peterSpeak("I'm listening.");
-      }
-      return;
-    }
-
-    speechText.textContent="You said: "+heard;
-    peterCore(heard);
-  };
-
-  recognition.onend = () => {
-    recognitionRunning = false;
-    if(peterListening && !speechSynthesis.speaking){
-      restartPeterListening();
-    }else{
-      updatePeterMic();
-    }
-  };
-
-  recognition.onerror = (event) => {
-    console.log("PETER speech error:",event.error);
-
-    if(event.error==="not-allowed" || event.error==="service-not-allowed"){
-      peterListening=false;
-      peterAwake=false;
-      recognitionRunning=false;
-      updatePeterMic();
-      speechText.textContent="Microphone permission is required. Tap PETER once and allow it.";
-      return;
-    }
-
-    if(peterListening && !speechSynthesis.speaking){
-      restartPeterListening();
-    }
-  };
-
-  window.addEventListener("load",()=>{
-    setTimeout(()=>{
-      // Do not claim the microphone is active until recognition.onstart fires.
-      peterListening=false;
-      peterAwake=false;
-      recognitionRunning=false;
-      updatePeterMic();
-    },500);
+  let score = 0;
+  PETER_VOCABULARY.forEach(function(v){
+    const n = peterNormalizeCommand(v);
+    if(s === n) score += 100;
+    else if(s.includes(n)) score += Math.min(70, n.split(" ").length * 18);
+    else if(n.includes(s) && s.length > 3) score += 25;
   });
-}else{
-  micBtn.textContent="🎙️ Voice unavailable";
-  speechText.textContent="Voice recognition is not supported in this browser.";
+
+  if(/\b(open|show|go|take me|enter|start|study|work|view|see|check)\b/.test(s)) score += 10;
+  if(/\b(peter|school|physics|chemistry|math|maths|english|calisthenics|editing|timeline|task|note|focus|jee|chapter)\b/.test(s)) score += 15;
+  score -= Math.max(0, s.split(" ").length - 12);
+  return score;
 }
 
-function peterSpeak(text){
-  if(!("speechSynthesis" in window)){
-    speechText.textContent=text;
-    return;
+function peterChooseSpeechTranscript(result){
+  const candidates = [];
+  for(let i=0;i<result.length;i++){
+    const t = result[i] && result[i].transcript ? result[i].transcript.trim() : "";
+    if(t) candidates.push(t);
   }
-
-  try{ recognition && recognition.abort(); }catch(e){}
-  speechSynthesis.cancel();
-
-  const speech=new SpeechSynthesisUtterance(String(text));
-
-  // PETER speaks English for now, even when the user gives a Hindi/Hinglish command.
-  // Hindi response mode can be added later without changing command recognition.
-  speech.lang="en-IN";
-  speech.rate=1.12;
-  speech.pitch=0.72;
-  speech.volume=1;
-
-  const voices=speechSynthesis.getVoices();
-  const malePreferred=[
-    "Google UK English Male",
-    "Google US English Male",
-    "Microsoft David",
-    "Microsoft George",
-    "Daniel",
-    "Rishi"
-  ];
-
-  let voice=voices.find(v =>
-    malePreferred.some(name => v.name.toLowerCase().includes(name.toLowerCase()))
-  );
-
-  if(!voice){
-    voice=voices.find(v =>
-      /male|man|david|george|daniel|rishi/i.test(v.name) &&
-      /^en/i.test(v.lang)
-    );
-  }
-
-  if(!voice){
-    voice=voices.find(v => /^en-IN/i.test(v.lang)) ||
-          voices.find(v => /^en/i.test(v.lang));
-  }
-
-  if(voice) speech.voice=voice;
-
-  speech.onstart=()=>updatePeterMic();
-
-  speech.onend=()=>{
-    speechText.textContent=String(text);
-    updatePeterMic();
-
-    // Very short restart gap: PETER becomes ready almost immediately.
-    if(peterListening && !sleepRequested){
-      setTimeout(restartPeterListening,50);
-    }
-  };
-
-  speech.onerror=()=>{
-    updatePeterMic();
-    if(peterListening && !sleepRequested){
-      setTimeout(restartPeterListening,50);
-    }
-  };
-
-  speechSynthesis.speak(speech);
-  try{ speechSynthesis.resume(); }catch(e){}
-  speechText.textContent=String(text);
+  if(!candidates.length) return "";
+  candidates.sort(function(a,b){ return peterSpeechScore(b) - peterSpeechScore(a); });
+  return candidates[0];
 }
 
-function formatScheduleTime(time){
-
-  const [hour,minute] = time.split(':').map(Number);
-
-  const suffix = hour >= 12 ? 'PM' : 'AM';
-
-  let displayHour = hour % 12;
-
-  if(displayHour === 0){
-    displayHour = 12;
-  }
-
-  if(minute === 0){
-    return displayHour + ' ' + suffix;
-  }
-
-  return displayHour + ':' +
-    String(minute).padStart(2,'0') +
-    ' ' + suffix;
-  }
-  function getMinutesRemaining(target){
-  if(!target) return 0;
-
-  const now = new Date();
-
-  const currentMinutes =
-    now.getHours() * 60 +
-    now.getMinutes();
-
-  const endMinutes = timeToMinutes(target.end);
-
-  return Math.max(0, endMinutes - currentMinutes);
-}
-
-
-function findScheduleTarget(command){
-  const schedule = getActiveSchedule();
-
-  if(!schedule || !schedule.timeline){
-    return null;
-  }
-
-  const query = command
-    .toLowerCase()
-    .replace('when does','')
-    .replace('when is','')
-    .replace('how long is','')
-    .replace('how long does','')
-    .replace('start','')
-    .replace('begin','')
+/* Override the old free-time checker with a tolerant version. */
+function peterParseSpokenTime(command){
+  let s = peterNormalizeCommand(command)
+    .replace(/\bwhat time is it\b/g,"")
+    .replace(/\bfree\b/g," ")
+    .replace(/\bavailable\b/g," ")
+    .replace(/\bwhen\b/g," ")
+    .replace(/\bam i\b/g," ")
+    .replace(/\bis\b/g," ")
+    .replace(/\bthere\b/g," ")
+    .replace(/\bfor\b/g," ")
+    .replace(/\bat\b/g," ")
+    .replace(/\bme\b/g," ")
+    .replace(/\bhu\b/g," ")
+    .replace(/\bhoon\b/g," ")
+    .replace(/\bhai\b/g," ")
+    .replace(/\bkya\b/g," ")
+    .replace(/\bmy\b/g," ")
+    .replace(/\bmain\b/g," ")
+    .replace(/\s+/g," ")
     .trim();
 
-  return schedule.timeline.find(item => {
-    const title = item.title.toLowerCase();
+  let m = s.match(/\b([01]?\d|2[0-3])\s*(?::|\.| )\s*([0-5]\d)\b/);
+  if(m) return Number(m[1])*60 + Number(m[2]);
 
-    return query.includes(title) ||
-           title.includes(query);
-  });
-  }
-  
-let peterCurrentSchoolSubject = "";
-
-
-function peterLooksLikeWhatsAppHindi(command){
-  const s = command.toLowerCase();
-  const markers = [
-    "aaj","kal","baje","hu","hoon","hai","kya","kyu","kyon",
-    "mera","meri","mere","mujhe","tum","kaise","kab","kitna",
-    "kitne","nahi","nahin","haan","free","padh","padhu","karu",
-    "karna","krna","chahiye","batao","btao","abhi","wala","wali"
-  ];
-  return markers.filter(x => s.includes(x)).length >= 2;
-}
-
-function peterFormatTimeForWhatsApp(minutes){
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  const suffix = h >= 12 ? "PM" : "AM";
-  let display = h % 12;
-  if(display === 0) display = 12;
-  return display + (m ? ":" + String(m).padStart(2,"0") : "") + " " + suffix;
-}
-
-function peterParseSpokenTime(command){
-  const match = command.match(/\\b(1[0-2]|0?[1-9])(?:\\s*[:.]\\s*(\\d{1,2}))?\\s*(am|pm)?\\s*(?:baje|bajay|bajee)?\\b/i);
-  if(!match) return null;
-
-  let hour = Number(match[1]);
-  const minute = match[2] ? Number(match[2]) : 0;
-  const suffix = (match[3] || "").toLowerCase();
-
-  if(suffix === "pm" && hour < 12) hour += 12;
-  if(suffix === "am" && hour === 12) hour = 0;
-
-  // In everyday Hindi/WhatsApp speech, "aaj 5 baje" normally means the
-  // next occurrence of 5 o'clock. If 5 AM has already passed, use 5 PM.
-  if(!suffix && /\\b(aaj|today)\\b/i.test(command)){
-    const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
-    let candidate = hour * 60 + minute;
-    if(candidate <= nowMinutes && hour < 12) candidate += 12 * 60;
-    return candidate;
+  m = s.match(/\b([1-9]|1[0-2])\s*(am|pm)\b/i);
+  if(m){
+    let h=Number(m[1]);
+    if(m[2].toLowerCase()==="pm" && h!==12) h+=12;
+    if(m[2].toLowerCase()==="am" && h===12) h=0;
+    return h*60;
   }
 
-  return hour * 60 + minute;
+  m = s.match(/\b([01]?\d|2[0-3])\b/);
+  if(m) return Number(m[1])*60;
+  return null;
 }
 
 function peterCheckFreeAtTime(command){
-  const askedFree =
-    /\\b(free|available|khali|khaali)\\b/i.test(command) &&
-    /(\\bhu\\b|\\bhoon\\b|\\bhai\\b|\\bkya\\b|\\bavailable\\b)/i.test(command);
-
-  if(!askedFree) return false;
-
-  const minutes = peterParseSpokenTime(command);
+  const s = peterNormalizeCommand(command);
+  if(!/\bfree\b|\bavailable\b/.test(s)) return false;
+  const minutes = peterParseSpokenTime(s);
   if(minutes === null) return false;
 
-  const schedule = getActiveSchedule();
-  const item = schedule && schedule.timeline
-    ? schedule.timeline.find(x => {
-        const start = timeToMinutes(x.start);
-        const end = timeToMinutes(x.end);
-        return minutes >= start && minutes < end;
-      })
-    : null;
+  const schedule = typeof getActiveSchedule === "function" ? getActiveSchedule() : null;
+  const item = schedule && schedule.timeline ? schedule.timeline.find(function(x){
+    const start=timeToMinutes(x.start), end=timeToMinutes(x.end);
+    return minutes>=start && minutes<end;
+  }) : null;
 
   if(!item){
+    peterSpeak("Yes. I do not see a scheduled task at that time.");
+  }else{
     peterSpeak(
-      "Haan, 5 baje ke aas-paas koi scheduled task nahi dikh raha." 
+      "No. You have " + item.title + " from " +
+      formatScheduleTime(item.start) + " to " +
+      formatScheduleTime(item.end) + "."
     );
-    return true;
   }
-
-  const hindi =
-    "Nahi bhai, " + peterFormatTimeForWhatsApp(minutes) +
-    " se " + formatScheduleTime(item.end) +
-    " tak " + item.title + " hai.";
-
-  peterSpeak(hindi);
   return true;
+}
+
+function peterNumberFromText(s){
+  const map={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,
+    eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,first:1,second:2,third:3,
+    fourth:4,fifth:5,sixth:6,seventh:7,eighth:8,ninth:9,tenth:10};
+  const m=String(s||"").match(/\b\d{1,2}\b/);
+  if(m) return Number(m[0]);
+  const tokens=String(s||"").split(/\s+/);
+  for(let i=0;i<tokens.length;i++) if(map[tokens[i]]) return map[tokens[i]];
+  return null;
 }
 
 function openSchoolChapterByVoice(chapterRequest){
-  const school = data.blocks.find(x => x.id === "school");
+  const school=data.blocks.find(function(x){return x.id==="school";});
   if(!school) return false;
 
-  let subjectIndex = school.modules.findIndex(
-    x => x[0].toLowerCase() === peterCurrentSchoolSubject.toLowerCase()
-  );
+  let subjectName=peterCurrentSchoolSubject || "";
+  let subjectIndex=school.modules.findIndex(function(x){
+    return String(x[0]).toLowerCase()===subjectName.toLowerCase();
+  });
+  if(subjectIndex<0){
+    subjectIndex=school.modules.findIndex(function(x){
+      return String(x[0]).toLowerCase().includes(subjectName.toLowerCase());
+    });
+  }
+  if(subjectIndex<0) return false;
 
-  if(subjectIndex < 0){
-    subjectIndex = school.modules.findIndex(
-      x => x[0].toLowerCase().includes(peterCurrentSchoolSubject.toLowerCase())
-    );
+  const chapters=school.modules[subjectIndex][2] || [];
+  const cleaned=peterNormalizeCommand(chapterRequest)
+    .replace(/\bopen\b|\bshow\b|\bchapter\b|\bnumber\b/g," ")
+    .replace(/\s+/g," ").trim();
+
+  let index=-1;
+  const n=peterNumberFromText(cleaned);
+  if(n && n>=1 && n<=chapters.length) index=n-1;
+
+  if(index<0){
+    let best=-1,bestScore=0;
+    chapters.forEach(function(ch,i){
+      const score=peterCommandScore(cleaned,ch);
+      if(score>bestScore){bestScore=score;best=i;}
+    });
+    if(best>=0 && bestScore>=35) index=best;
   }
 
-  if(subjectIndex < 0) return false;
-
-  const chapters = school.modules[subjectIndex][2] || [];
-  const cleaned = chapterRequest
-    .toLowerCase()
-    .replace(/chapter/g,"")
-    .replace(/no\\.?/g,"")
-    .replace(/number/g,"")
-    .trim();
-
-  let chapterIndex = -1;
-
-  const number = cleaned.match(/\\b(\\d{1,2})\\b/);
-  if(number){
-    const n = Number(number[1]);
-    if(n >= 1 && n <= chapters.length) chapterIndex = n - 1;
-  }
-
-  if(chapterIndex < 0){
-    chapterIndex = chapters.findIndex(ch =>
-      cleaned.includes(ch.toLowerCase()) ||
-      ch.toLowerCase().includes(cleaned)
-    );
-  }
-
-  if(chapterIndex < 0) return false;
-
-  openSchoolChapter(school.modules[subjectIndex][0], subjectIndex, chapterIndex);
-  peterResponseLanguage = "en";
-  peterSpeak("Opening " + school.modules[subjectIndex][0] + ", Chapter " + (chapterIndex + 1) + ".");
+  if(index<0) return false;
+  openSchoolChapter(school.modules[subjectIndex][0],subjectIndex,index);
+  peterSpeak("Opening " + school.modules[subjectIndex][0] + ", Chapter " + (index+1) + ".");
   return true;
 }
 
-function peterCommandScore(query, target){
-  const q = peterNormalizeCommand(query);
-  const t = peterNormalizeCommand(target);
+function peterCommandScore(query,target){
+  const q=peterNormalizeCommand(query), t=peterNormalizeCommand(target);
   if(!q || !t) return 0;
-  if(q === t) return 100;
-  if(q.includes(t)) return 85;
-  if(t.includes(q)) return 80;
-
-  const a = new Set(q.split(/\\s+/).filter(Boolean));
-  const b = new Set(t.split(/\\s+/).filter(Boolean));
-  let common = 0;
-  b.forEach(x => { if(a.has(x)) common++; });
-  return common ? Math.round((common / Math.max(a.size,b.size)) * 70) : 0;
+  if(q===t) return 100;
+  if(q.includes(t)) return 90;
+  if(t.includes(q)) return 82;
+  const a=q.split(/\s+/).filter(Boolean), b=t.split(/\s+/).filter(Boolean);
+  let common=0;
+  b.forEach(function(x){ if(a.indexOf(x)>=0) common++; });
+  return common ? Math.round(common/Math.max(a.length,b.length)*80) : 0;
 }
 
-function peterGenericNavigation(command){
-  const s = peterNormalizeCommand(command);
-
-  // Universal navigation aliases.
-  if(/\\b(back|go back|previous|pichhe|peeche|wapas)\\b/.test(s)){
-    goHome();
-    peterSpeak("Going back.");
-    return true;
-  }
-
-  if(/\\b(home|dashboard|main screen|main page|ghar)\\b/.test(s) &&
-     !/\\b(open school|school day)\\b/.test(s)){
-    goHome();
-    peterSpeak("Going home.");
-    return true;
-  }
-
-  if(/\\b(tasks?|today tasks?|todays tasks?|today's tasks?|my tasks?)\\b/.test(s)){
-    showView("tasks");
-    peterSpeak("Opening today's tasks.");
-    return true;
-  }
-
-  if(/\\b(timeline|today timeline|today's timeline|schedule|today schedule|plan for today)\\b/.test(s)){
-    showView("timeline");
-    peterSpeak("Opening today's timeline.");
-    return true;
-  }
-
-  if(/\\b(notes?|quick notes?|capture|my notes?)\\b/.test(s)){
-    showView("notes");
-    peterSpeak("Opening notes.");
-    return true;
-  }
-
-  if(/\\b(focus|focus mode|focus timer|start focus)\\b/.test(s)){
-    startFocus(25);
-    peterSpeak("Starting focus mode.");
-    return true;
-  }
-
-  if(/\\b(edit mode|settings|edit peter)\\b/.test(s)){
-    openEdit();
-    peterSpeak("Opening edit mode.");
-    return true;
-  }
-
-  // Any School chapter, including number words, while a subject is active.
-  if(/\\bchapter\\b/.test(s) && peterCurrentSchoolSubject){
-    if(openSchoolChapterByVoice(s)) return true;
-  }
-
-  // Generic dashboard block navigation. A block can be referred to by
-  // its exact title, a common alias, or by a natural "open/show/study" phrase.
-  const aliases = {
-    "calisthenics":["calisthenics","workout","exercise","training"],
+function peterOpenBestBlock(s){
+  const aliases={
+    "calisthenics":["calisthenics","workout","exercise","training","workout plan"],
     "editing":["editing","video editing","edit"],
-    "advanced editing":["advanced editing","vfx","cgi","cgi vfx","advanced edit"],
+    "advanced editing":["advanced editing","advanced edit","vfx","cgi","cgi vfx","visual effects"],
     "spidy senses":["spidy senses","spidey senses","spider senses","senses"],
     "improve eyesight":["improve eyesight","eyesight","eye training","eyes"],
-    "school":["school","school study","school plan"],
+    "school":["school","school study","school plan","school work"],
     "jee study":["jee study","jee","jee preparation","jee plan"],
     "peter":["peter","peter system","peter project"]
   };
-
-  const actionWords=/\\b(open|show|go to|take me to|enter|start|study|work on|load|view|see|check|go)\\b/;
-  const shouldOpen = actionWords.test(s);
-
   let best=null;
-  (data.blocks||[]).forEach(block=>{
-    const names=[block.title,...(aliases[block.title.toLowerCase()]||[])];
-    let score=0;
-    names.forEach(name=>{
-      score=Math.max(score,peterCommandScore(s,name));
-      if(s.includes(peterNormalizeCommand(name))) score=Math.max(score,90);
+
+  (data.blocks||[]).forEach(function(block){
+    const list=[block.title].concat(aliases[String(block.title).toLowerCase()]||[]);
+    list.forEach(function(name){
+      let score=peterCommandScore(s,name);
+      if(/\b(open|show|go|take me|enter|start|study|work|load|view|see|check)\b/.test(s) && s.includes(peterNormalizeCommand(name))) score+=30;
+      if(!best || score>best.score) best={block:block,score:score};
     });
-    if(score> (best?.score||0)) best={block,score};
   });
 
-  if(best && (shouldOpen || best.score>=80)){
+  if(best && best.score>=45){
     openDetail(best.block.id);
     peterSpeak("Opening " + best.block.title + ".");
     return true;
   }
+  return false;
+}
 
-  // If a normal PETER block is already open, match its module with
-  // tolerant word matching so speech recognition does not need exact wording.
-  const currentDetail=document.getElementById("detailTitle");
-  const currentBlock=currentDetail
-    ? (data.blocks||[]).find(b => peterNormalizeCommand(b.title)===peterNormalizeCommand(currentDetail.textContent))
-    : null;
+function peterGenericNavigation(command){
+  const s=peterNormalizeCommand(command);
+
+  if(/\b(?:back|go back|previous|pichhe|peeche|wapas)\b/.test(s)){
+    goHome(); peterSpeak("Going back."); return true;
+  }
+  if(/\b(?:home|dashboard|main screen|main page|ghar)\b/.test(s)){
+    goHome(); peterSpeak("Going home."); return true;
+  }
+  if(/\b(?:tasks?|today tasks?|todays tasks?|my tasks?|show tasks?|task list)\b/.test(s)){
+    showView("tasks"); peterSpeak("Opening today's tasks."); return true;
+  }
+  if(/\b(?:timeline|today timeline|today's timeline|schedule|today schedule|today plan|my schedule|my timeline)\b/.test(s)){
+    showView("timeline"); peterSpeak("Opening today's timeline."); return true;
+  }
+  if(/\b(?:notes?|quick notes?|capture|my notes?)\b/.test(s) && !/\bsave\b/.test(s)){
+    showView("notes"); peterSpeak("Opening notes."); return true;
+  }
+  if(/\b(?:focus|focus mode|focus timer|start focus|start a focus)\b/.test(s)){
+    startFocus(/\b50\b|\bfifty\b/.test(s)?50:25);
+    peterSpeak("Starting focus mode."); return true;
+  }
+  if(/\b(?:edit mode|settings|edit peter)\b/.test(s)){
+    openEdit(); peterSpeak("Opening edit mode."); return true;
+  }
+  if(/\b(?:normal day|set normal day)\b/.test(s)){
+    setDayMode("normal"); return true;
+  }
+  if(/\b(?:school day|set school day)\b/.test(s)){
+    setDayMode("school"); return true;
+  }
+  if(/\b(?:free day|set free day)\b/.test(s)){
+    setDayMode("free"); return true;
+  }
+
+  if(/\b(?:are you listening|can you hear me|sun rahe ho)\b/.test(s)){
+    peterSpeak("Yes. I am listening."); return true;
+  }
+
+  if(/\b(?:what can you do|what are your commands|help|help me)\b/.test(s)){
+    peterSpeak("I can open your systems, school subjects and chapters, show tasks and timeline, change day mode, start focus mode, take notes, check your schedule, and answer time and date questions."); return true;
+  }
+
+  if(/\b(?:what(?:'s| is) next|next target|what should i do next)\b/.test(s)){
+    const r=getCurrentAndNextTarget();
+    if(r.next) peterSpeak("Your next target is " + r.next.title + " at " + formatScheduleTime(r.next.start) + ".");
+    else if(r.current) peterSpeak("You are in " + r.current.title + ". There are no more scheduled targets today.");
+    else peterSpeak("There are no more scheduled targets today.");
+    return true;
+  }
+
+  if(/\b(?:what should i do today|what do i need to do today|what do i have to do today|today's tasks)\b/.test(s)){
+    showView("tasks"); peterSpeak("Here are your tasks for today."); return true;
+  }
+
+  if(/\b(?:how much time is left|how much time remains|time remaining|time left)\b/.test(s)){
+    const r=getCurrentAndNextTarget();
+    if(r.current) peterSpeak("You have " + Math.max(1,getMinutesRemaining(r.current)) + " minutes left in " + r.current.title + ".");
+    else if(r.next) peterSpeak("Your next target is " + r.next.title + " at " + formatScheduleTime(r.next.start) + ".");
+    else peterSpeak("There are no more scheduled targets today.");
+    return true;
+  }
+
+  if(/\b(?:take a note|make a note|save a note|note this|remember this)\b/.test(s)){
+    const note=s.replace(/\b(?:take a note|make a note|save a note|note this|remember this)\b/,"").trim();
+    if(note){
+      const notes=JSON.parse(localStorage.getItem("peter_notes")||"[]");
+      notes.push({text:note,date:new Date().toLocaleString()});
+      localStorage.setItem("peter_notes",JSON.stringify(notes.slice(-30)));
+      renderNotes();
+      showView("notes");
+      peterSpeak("Note saved.");
+    }else{
+      showView("notes"); peterSpeak("Opening notes.");
+    }
+    return true;
+  }
+
+  /* School subject routing. */
+  const subjects=[
+    ["physics","Physics"],["chemistry","Chemistry"],
+    ["mathematics","Mathematics"],["maths","Mathematics"],["math","Mathematics"],
+    ["english","English"],["physical education","Physical Education"],
+    ["physical ed","Physical Education"],["pe","Physical Education"]
+  ];
+  for(let i=0;i<subjects.length;i++){
+    if(new RegExp("\\b"+subjects[i][0].replace(" ","\\s+")+"\\b","i").test(s)){
+      if(!/\bchapter\b/.test(s) || !peterCurrentSchoolSubject){
+        openSchoolByVoice(subjects[i][1]);
+        peterSpeak("Opening " + subjects[i][1] + ".");
+        return true;
+      }
+    }
+  }
+
+  if(/\bchapter\b/.test(s) && peterCurrentSchoolSubject){
+    if(openSchoolChapterByVoice(s)) return true;
+  }
+
+  if(peterOpenBestBlock(s)) return true;
+
+  /* Current detail -> module. */
+  const titleEl=document.getElementById("detailTitle");
+  const currentBlock=titleEl ? (data.blocks||[]).find(function(b){
+    return peterNormalizeCommand(b.title)===peterNormalizeCommand(titleEl.textContent);
+  }) : null;
 
   if(currentBlock){
-    let bestModule=-1, bestScore=0;
-    currentBlock.modules.forEach((m,i)=>{
+    let best=-1,bestScore=0;
+    (currentBlock.modules||[]).forEach(function(m,i){
       const score=peterCommandScore(s,m[0]||"");
-      if(score>bestScore){bestScore=score;bestModule=i;}
+      if(score>bestScore){bestScore=score;best=i;}
     });
-
-    if(bestModule>=0 && bestScore>=55){
+    if(best>=0 && bestScore>=35){
       openDetail(currentBlock.id);
-      setTimeout(()=>{
-        const el=document.getElementById("mod"+bestModule);
+      setTimeout(function(){
+        const el=document.getElementById("mod"+best);
         if(el) el.classList.add("open");
-      },50);
-      peterSpeak("Opening " + currentBlock.modules[bestModule][0] + ".");
+      },40);
+      peterSpeak("Opening " + currentBlock.modules[best][0] + ".");
       return true;
     }
   }
@@ -1538,647 +1351,282 @@ function peterGenericNavigation(command){
   return false;
 }
 
-function peterCore(command) {
+/* Replace the old chapter/free helpers at runtime and make text + voice use
+   exactly the same command router. */
+function peterProcessCommand(command){
+  let s=peterNormalizeCommand(command).trim();
+  if(!s) return;
 
-    command = peterNormalizeCommand(command).trim();
-    peterResponseLanguage = "en";
+  peterResponseLanguage="en";
 
-    // Natural WhatsApp/Hinglish time-availability questions.
-    if(peterCheckFreeAtTime(command)) return;
+  if(peterCheckFreeAtTime(s)) return;
 
-    // SLEEP / HANDS-FREE OFF
-if (
-  command.includes("sleeping time") ||
-  command === "sleep" ||
-  command.includes("go to sleep") ||
-  command.includes("go sleep")
-) {
+  /* Time. */
+  if(s==="time" || /\bwhat time is it\b|\btell me the time\b|\bcurrent time\b/.test(s)){
+    const now=new Date();
+    peterSpeak("The current time is " + now.toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"}) + ".");
+    return;
+  }
 
-  peterAwake = false;
-  peterListening = false;
+  /* Date. */
+  if(/\b(?:what date is it|what day is it|today's date|today date)\b/.test(s)){
+    const now=new Date();
+    peterSpeak("Today is " + now.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) + ".");
+    return;
+  }
 
-  try {
-    recognition.stop();
-  } catch (e) {}
+  /* Sleep. */
+  if(s==="sleep" || /\bsleep\b/.test(s) && /\b(?:go|time|please|now|band|so)\b/.test(s)){
+    peterAwake=false;
+    sleepRequested=true;
+    peterListening=false;
+    try{recognition && recognition.abort();}catch(e){}
+    peterSpeak("Going to sleep.");
+    return;
+  }
 
-  micBtn.textContent = "😴 PETER sleeping";
-  speechText.textContent = "PETER is sleeping. Say Peter to wake me.";
+  /* Natural schedule queries. */
+  if(/\b(?:when does|when is).+\bstart\b/.test(s)){
+    const target=findScheduleTarget(s);
+    if(target) peterSpeak(target.title+" starts at "+formatScheduleTime(target.start)+".");
+    else peterSpeak("I couldn't find that target in today's schedule.");
+    return;
+  }
+  if(/\bhow long (?:is|does|will)\b/.test(s)){
+    const target=findScheduleTarget(s);
+    if(target){
+      const d=timeToMinutes(target.end)-timeToMinutes(target.start);
+      peterSpeak(target.title+" lasts "+(d<60?d+" minutes.":Math.floor(d/60)+" hour"+(Math.floor(d/60)===1?"":"s")+(d%60? " "+d%60+" minutes.":".")));
+    }else peterSpeak("I couldn't find that target in today's schedule.");
+    return;
+  }
 
-  peterSpeak("Going to sleep.");
+  /* Wake-independent universal commands. */
+  if(peterGenericNavigation(s)) return;
 
-  return;
+  peterSpeak("I can handle that if it matches one of my PETER systems. Try saying open school, open calisthenics, show timeline, show tasks, take a note, start focus, or go home.");
 }
 
-    // TIME
-if (
-  command === "time" ||
-  command === "what time is it" ||
-  command === "what time is it right now" ||
-  command === "tell me the time" ||
-  command === "current time"
-) {
-
-  const now = new Date();
-
-  const time = now.toLocaleTimeString("en-IN", {
-    hour: "numeric",
-    minute: "2-digit"
-  });
-
-  peterSpeak("The current time is " + time + ".");
-
-  return;
+/* Make the old core point to the same router for typed commands too. */
+function peterCore(command){
+  peterProcessCommand(command);
 }
-  // DATE
-    if (
-      command.includes("date") ||
-      command.includes("what date") ||
-      command.includes("what day")
-    ) {
 
-      const now = new Date();
+function sendTextCommand(){
+  const input=document.getElementById("peterCommandInput");
+  const output=document.getElementById("speechText");
+  if(!input || !output) return;
+  const command=input.value.trim();
+  if(!command){output.textContent="Please type a command.";return;}
+  input.value="";
+  output.textContent="You typed: "+command;
+  try{peterProcessCommand(command);}catch(error){
+    console.error("PETER Core Error:",error);
+    output.textContent="PETER encountered an error.";
+    peterSpeak("I hit an internal error while processing that command.");
+  }
+}
 
-      const date = now.toLocaleDateString("en-IN", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric"
-      });
+document.getElementById("peterCommandInput")?.addEventListener("keydown",function(event){
+  if(event.key==="Enter"){event.preventDefault();sendTextCommand();}
+});
 
-      peterSpeak("Today is " + date + ".");
+if(SpeechRecognition){
+  recognition=new SpeechRecognition();
 
+  /* One utterance at a time is more reliable on Android than keeping a
+     continuous recognition session alive. PETER immediately starts the next
+     utterance after processing/speaking, so the user still gets hands-free
+     operation. */
+  recognition.lang="en-IN";
+  recognition.continuous=false;
+  recognition.interimResults=false;
+  recognition.maxAlternatives=5;
+
+  try{
+    if("phrases" in recognition && "SpeechRecognitionPhrase" in window){
+      const words=[
+        "Peter","PETER","School","Physics","Chemistry","Mathematics","Maths",
+        "English","Physical Education","Calisthenics","Workout","Editing",
+        "Advanced Editing","VFX","CGI","Spidy Senses","Spidey Senses",
+        "Improve Eyesight","JEE Study","Chapter","NCERT","Module","Timeline",
+        "Tasks","Notes","Focus","Normal Day","School Day","Free Day"
+      ];
+      recognition.phrases=words.map(function(w){return new SpeechRecognitionPhrase(w,10);});
+    }
+  }catch(e){}
+
+  micBtn.onclick=async function(){
+    if(peterListening){
+      peterListening=false;
+      peterAwake=false;
+      sleepRequested=true;
+      clearTimeout(peterRestartTimer);
+      try{recognition.abort();}catch(e){}
+      try{speechSynthesis.cancel();}catch(e){}
+      peterVoiceBusy=false;
+      updatePeterMic();
+      speechText.textContent="PETER is sleeping.";
       return;
     }
 
-    // SCHOOL
-if (
-  command.includes("open school") ||
-  command === "school"
-) {
-  openDetail("school");
-
-  peterSpeak("Opening School.");
-
-  return;
-}
-
-
-// SCHOOL — PHYSICS
-if (
-  command.includes("physics") &&
-  (
-    command.includes("open") ||
-    command.includes("study") ||
-    command.includes("go to") ||
-    command.includes("take me") ||
-    command === "physics"
-  )
-) {
-  openSchoolByVoice("Physics");
-
-  peterSpeak("Opening Physics.");
-
-  return;
-}
-
-
-// SCHOOL — CHEMISTRY
-if (
-  command.includes("chemistry") &&
-  (
-    command.includes("open") ||
-    command.includes("study") ||
-    command.includes("go to") ||
-    command.includes("take me") ||
-    command === "chemistry"
-  )
-) {
-  openSchoolByVoice("Chemistry");
-
-  peterSpeak("Opening Chemistry.");
-
-  return;
-}
-
-
-// SCHOOL — MATHEMATICS
-if (
-  (
-    command.includes("mathematics") ||
-    command.includes("maths") ||
-    command.includes("math")
-  ) &&
-  (
-    command.includes("open") ||
-    command.includes("study") ||
-    command.includes("go to") ||
-    command.includes("take me") ||
-    command === "mathematics" ||
-    command === "maths" ||
-    command === "math"
-  )
-) {
-  openSchoolByVoice("Mathematics");
-
-  peterSpeak("Opening Mathematics.");
-
-  return;
-}
-
-
-// SCHOOL — ENGLISH
-if (
-  command.includes("english") &&
-  (
-    command.includes("open") ||
-    command.includes("study") ||
-    command.includes("go to") ||
-    command.includes("take me") ||
-    command === "english"
-  )
-) {
-  openSchoolByVoice("English");
-
-  peterSpeak("Opening English.");
-
-  return;
-}
-
-
-// SCHOOL — PHYSICAL EDUCATION
-if (
-  (
-    command.includes("physical education") ||
-    command.includes("physical ed") ||
-    command === "pe"
-  )
-) {
-  openSchoolByVoice("Physical Education");
-
-  peterSpeak("Opening Physical Education.");
-
-  return;
-}
-    // GO HOME
-    if (
-      command.includes("go home") ||
-      command === "home"
-    ) {
-
-      goHome();
-
-      peterSpeak("Going home.");
-
+    if(!window.isSecureContext){
+      speechText.textContent="PETER voice needs HTTPS. Open the GitHub Pages PETER link in Chrome.";
       return;
     }
-  // DAY MODE — NORMAL
-if(
-  command.includes("normal day") ||
-  command.includes("set normal day")
-){
 
-  activeDayMode = 'normal';
-
-  localStorage.setItem(
-    'peter_day_mode',
-    activeDayMode
-  );
-
-  renderTimeline();
-
-  peterSpeak(
-    "Normal day schedule activated."
-  );
-
-  return;
-}
-
-
-// DAY MODE — SCHOOL
-if(
-  command.includes("school day") ||
-  command.includes("set school day")
-){
-
-  activeDayMode = 'school';
-
-  localStorage.setItem(
-    'peter_day_mode',
-    activeDayMode
-  );
-
-  renderTimeline();
-
-  peterSpeak(
-    "School day schedule activated."
-  );
-
-  return;
-}
-
-
-// DAY MODE — FREE DAY
-if(
-  command.includes("free day") ||
-  command.includes("set free day")
-){
-
-  activeDayMode = 'free';
-
-  localStorage.setItem(
-    'peter_day_mode',
-    activeDayMode
-  );
-
-  renderTimeline();
-
-  peterSpeak(
-    "Free day schedule activated."
-  );
-
-  return;
-  }
-// TODAY'S TARGET / NEXT TARGET
-if (
-  command.includes("target today") ||
-  command.includes("today's target") ||
-  command.includes("todays target") ||
-  command.includes("my target today") ||
-  command.includes("what am i doing") ||
-  command.includes("what should i be doing") ||
-  command.includes("what's next") ||
-  command.includes("whats next") ||
-  command.includes("what is next") ||
-  command.includes("next target") ||
-  command.includes("what should i do next")
-) {
-
-  const result = getCurrentAndNextTarget();
-  const current = result.current;
-  const next = result.next;
-
-  if(current && next){
-
-    peterSpeak(
-      "Right now, you're in " +
-      current.title +
-      ". Your next target is " +
-      next.title +
-      " at " +
-      formatScheduleTime(next.start) +
-      "."
-    );
-
-  }else if(current && !next){
-
-    peterSpeak(
-      "Right now, you're in " +
-      current.title +
-      ". There are no more scheduled targets after this."
-    );
-
-  }else if(!current && next){
-
-    peterSpeak(
-      "You're between scheduled targets. Your next target is " +
-      next.title +
-      " at " +
-      formatScheduleTime(next.start) +
-      "."
-    );
-
-  }else{
-
-    peterSpeak(
-      "You've completed today's schedule."
-    );
-
-  }
-
-  return;
-  }
-    // HOW MUCH TIME IS LEFT
-if(
-  command.includes("how much time is left") ||
-  command.includes("how much time is remaining") ||
-  command.includes("how much time remains") ||
-  command.includes("how many minutes are left") ||
-  command.includes("time left") ||
-  command.includes("time remaining")
-){
-
-  const result = getCurrentAndNextTarget();
-
-  if(result.current){
-
-    const remaining = getMinutesRemaining(result.current);
-
-    if(remaining <= 1){
-
-      peterSpeak(
-        "You have about 1 minute left in " +
-        result.current.title + "."
-      );
-
-    }else{
-
-      peterSpeak(
-        "You have " +
-        remaining +
-        " minutes left in " +
-        result.current.title + "."
-      );
-    }
-
-  }else if(result.next){
-
-    peterSpeak(
-      "You're between scheduled targets. Your next target is " +
-      result.next.title +
-      " at " +
-      formatScheduleTime(result.next.start) +
-      "."
-    );
-
-  }else{
-
-    peterSpeak(
-      "There are no more scheduled targets today."
-    );
-  }
-
-  return;
-}
-
-
-// WHAT'S NEXT
-if(
-  command.includes("what's next") ||
-  command.includes("whats next") ||
-  command.includes("what is next") ||
-  command.includes("next target") ||
-  command.includes("what should i do next")
-){
-
-  const result = getCurrentAndNextTarget();
-
-  if(result.next){
-
-    peterSpeak(
-      "Your next target is " +
-      result.next.title +
-      " at " +
-      formatScheduleTime(result.next.start) +
-      "."
-    );
-
-  }else{
-
-    peterSpeak(
-      "There are no more scheduled targets today."
-    );
-  }
-
-  return;
-}
-
-
-// WHEN DOES A TARGET START
-if(
-  command.includes("when does") &&
-  command.includes("start")
-){
-
-  const target = findScheduleTarget(command);
-
-  if(target){
-
-    peterSpeak(
-      target.title +
-      " starts at " +
-      formatScheduleTime(target.start) +
-      "."
-    );
-
-  }else{
-
-    peterSpeak(
-      "I couldn't find that target in today's schedule."
-    );
-  }
-
-  return;
-}
-
-
-// HOW LONG IS A TARGET
-if(
-  command.includes("how long is") ||
-  command.includes("how long does") ||
-  command.includes("how long will")
-){
-
-  const target = findScheduleTarget(command);
-
-  if(target){
-
-    const start = timeToMinutes(target.start);
-    const end = timeToMinutes(target.end);
-
-    const duration = end - start;
-
-    if(duration < 60){
-
-      peterSpeak(
-        target.title +
-        " lasts " +
-        duration +
-        " minutes."
-      );
-
-    }else{
-
-      const hours = Math.floor(duration / 60);
-      const minutes = duration % 60;
-
-      if(minutes === 0){
-
-        peterSpeak(
-          target.title +
-          " lasts " +
-          hours +
-          (hours === 1 ? " hour." : " hours.")
-        );
-
-      }else{
-
-        peterSpeak(
-          target.title +
-          " lasts " +
-          hours +
-          (hours === 1 ? " hour " : " hours ") +
-          minutes +
-          " minutes."
-        );
+    peterListening=true;
+    peterAwake=false;
+    sleepRequested=false;
+    speechText.textContent='Microphone ready. Say "Peter"...';
+    updatePeterMic();
+
+    if(navigator.mediaDevices?.getUserMedia){
+      try{
+        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        stream.getTracks().forEach(function(t){t.stop();});
+      }catch(e){
+        peterListening=false;
+        updatePeterMic();
+        speechText.textContent=e.name==="NotAllowedError"
+          ?"Microphone permission was denied. Chrome site settings → Microphone → Allow."
+          :"Could not access the microphone. Check Chrome microphone permission.";
+        return;
       }
     }
 
-  }else{
+    peterRestartListening(80);
+  };
 
-    peterSpeak(
-      "I couldn't find that target in today's schedule."
-    );
-  }
+  recognition.onstart=function(){
+    recognitionRunning=true;
+    recognitionStarting=false;
+    speechText.textContent=peterAwake ? "PETER is listening." : 'Listening for "Peter"...';
+    updatePeterMic();
+  };
 
-  return;
-}
+  recognition.onresult=function(event){
+    if(!event.results || !event.results.length) return;
+    const result=event.results[event.resultIndex || 0];
+    const transcript=peterChooseSpeechTranscript(result);
+    if(!transcript) return;
 
+    const heard=peterNormalizeCommand(transcript);
+    console.log("PETER heard:",heard);
 
-// NATURAL LANGUAGE — TODAY'S TASKS
-if (
-  command.includes("what i have to do today") ||
-  command.includes("what do i need to do today") ||
-  command.includes("what should i do today") ||
-  command.includes("what do i have to do") ||
-  command.includes("what do i need to do")
-) {
-  showView("tasks");
-  peterSpeak("Here are your tasks for today.");
-  return;
-}
-
-
-// NATURAL LANGUAGE — TODAY'S TIMELINE
-if (
-  command.includes("what's on my schedule") ||
-  command.includes("what is on my schedule") ||
-  command.includes("show me my schedule") ||
-  command.includes("show me my timeline") ||
-  command.includes("i want to see my timeline")
-) {
-  showView("timeline");
-  peterSpeak("Here is your timeline for today.");
-  return;
-  }
-    // SHOW TODAY'S TASKS
-if(
-  command.includes("show my tasks") ||
-  command.includes("show today's tasks") ||
-  command.includes("show todays tasks") ||
-  command.includes("what are my tasks") ||
-  command === "tasks" ||
-  command === "today's tasks"
-){
-  showView("tasks");
-
-  peterSpeak(
-    "Here are today's tasks."
-  );
-
-  return;
-}
-
-
-// SHOW TODAY'S TIMELINE
-if(
-  command.includes("show timeline") ||
-  command.includes("open timeline") ||
-  command.includes("show today's timeline") ||
-  command.includes("show todays timeline") ||
-  command === "timeline"
-){
-  showView("timeline");
-
-  peterSpeak(
-    "Opening today's timeline."
-  );
-
-  return;
-  }
-    // SHOW TODAY'S SCHEDULE
-if(
-  command.includes("show today's schedule") ||
-  command.includes("show todays schedule") ||
-  command.includes("show today's timeline") ||
-  command.includes("show todays timeline") ||
-  command.includes("show the schedule") ||
-  command.includes("show today's plan") ||
-  command.includes("show todays plan") ||
-  command.includes("today's schedule") ||
-  command.includes("todays schedule")
-){
-
-  renderTimeline();
-
-  peterSpeak(
-    "Today's " +
-    (data.daySchedules?.[activeDayMode]?.label || "schedule") +
-    " is shown on the dashboard."
-  );
-
-  return;
-}
-    
-    // GENERIC VOICE NAVIGATION / FALLBACK
-    if(peterGenericNavigation(command)) return;
-
-    if(peterResponseLanguage === "hi"){
-      peterSpeak("Bhai, ye command abhi PETER ke actions me mapped nahi hai. Main ise bhi add kar sakta hoon.");
-    }else{
-      peterSpeak("I don't understand that command yet.");
-    }
-    }
-  
-    function sendTextCommand() {
-    const input = document.getElementById("peterCommandInput");
-    const output = document.getElementById("speechText");
-
-    if (!input || !output) {
-        console.error("PETER: Text input or output element not found.");
+    if(!peterAwake){
+      if(!hasWakeWord(heard)){
+        speechText.textContent='Waiting for "Peter"...';
         return;
+      }
+      peterAwake=true;
+      sleepRequested=false;
+      const command=peterNormalizeCommand(peterStripWakeWord(heard));
+      if(command){
+        speechText.textContent="You said: "+command;
+        peterProcessCommand(command);
+      }else{
+        peterSpeak("I'm listening.");
+      }
+      return;
     }
 
-    const command = input.value.trim();
+    speechText.textContent="You said: "+heard;
+    peterProcessCommand(heard);
+  };
 
-    if (!command) {
-        output.textContent = "Please type a command.";
-        return;
+  recognition.onend=function(){
+    recognitionRunning=false;
+    recognitionStarting=false;
+    updatePeterMic();
+    if(peterListening && !sleepRequested && !peterVoiceBusy){
+      peterRestartListening(160);
+    }
+  };
+
+  recognition.onerror=function(event){
+    recognitionRunning=false;
+    recognitionStarting=false;
+    console.log("PETER speech error:",event.error);
+
+    if(event.error==="not-allowed" || event.error==="service-not-allowed"){
+      peterListening=false;
+      peterAwake=false;
+      sleepRequested=true;
+      updatePeterMic();
+      speechText.textContent="Microphone permission is required. Allow it in Chrome and tap PETER again.";
+      return;
     }
 
-    input.value = "";
-
-    output.textContent = "You typed: " + command;
-
-    try {
-        peterCore(command);
-    } catch (error) {
-        console.error("PETER Core Error:", error);
-        output.textContent = "PETER encountered an error.";
+    if(peterListening && !sleepRequested && !peterVoiceBusy){
+      peterRestartListening(event.error==="no-speech" ? 120 : 350);
     }
+  };
+
+}else{
+  micBtn.textContent="🎙️ Voice unavailable";
+  speechText.textContent="Voice recognition is not supported in this browser.";
 }
 
+function peterSpeak(text){
+  const spoken=String(text||"");
+  speechText.textContent=spoken;
 
-/* ENTER KEY */
-document
-    .getElementById("peterCommandInput")
-    ?.addEventListener("keydown", function(event) {
+  if(!("speechSynthesis" in window)){
+    if(peterListening && !sleepRequested) peterRestartListening(100);
+    return;
+  }
 
-        if (event.key === "Enter") {
-            event.preventDefault();
-            sendTextCommand();
-        }
+  try{recognition && recognition.abort();}catch(e){}
+  speechSynthesis.cancel();
 
-    });
+  peterVoiceBusy=true;
+  updatePeterMic();
 
+  const speech=new SpeechSynthesisUtterance(spoken);
+  speech.lang="en-IN";
+  speech.rate=1.08;
+  speech.pitch=0.72;
+  speech.volume=1;
 
-/* SEND BUTTON */
-document
-    .getElementById("sendTextBtn")
-    ?.addEventListener("click", function() {
+  const voices=speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
+  const preferred=[
+    "Google UK English Male","Google US English Male","Microsoft David",
+    "Microsoft George","Daniel","Rishi"
+  ];
 
-        sendTextCommand();
+  let voice=voices.find(function(v){
+    return preferred.some(function(name){return v.name.toLowerCase().includes(name.toLowerCase());});
+  });
+  if(!voice) voice=voices.find(function(v){
+    return /male|david|george|daniel|rishi/i.test(v.name) && /^en/i.test(v.lang);
+  });
+  if(!voice) voice=voices.find(function(v){return /^en-IN/i.test(v.lang);}) ||
+              voices.find(function(v){return /^en/i.test(v.lang);});
+  if(voice) speech.voice=voice;
 
-    });
+  speech.onend=function(){
+    peterVoiceBusy=false;
+    updatePeterMic();
+    if(peterListening && !sleepRequested) peterRestartListening(100);
+  };
+  speech.onerror=function(){
+    peterVoiceBusy=false;
+    updatePeterMic();
+    if(peterListening && !sleepRequested) peterRestartListening(100);
+  };
+
+  speechSynthesis.speak(speech);
+  updatePeterMic();
+}
+
+window.addEventListener("load",function(){
+  peterListening=false;
+  peterAwake=false;
+  sleepRequested=false;
+  peterVoiceBusy=false;
+  updatePeterMic();
+});
 </script>
 
 </body></html>
