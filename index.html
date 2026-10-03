@@ -901,7 +901,7 @@ if (SpeechRecognition) {
 
   // IMPORTANT:
   // One question at a time.
-  recognition.continuous = false;
+  recognition.continuous = true;
 
   // Final result is enough for now.
   recognition.interimResults = false;
@@ -983,9 +983,10 @@ if (SpeechRecognition) {
           speechText.textContent =
             "PETER heard: " + command;
 
-          peterAwake = false;
+          // Stay active after the wake phrase.
+          peterAwake = true;
 
-          // Answer immediately
+          // Answer immediately, then listen for the next command.
           peterCore(command);
 
         } else {
@@ -1018,9 +1019,10 @@ if (SpeechRecognition) {
     speechText.textContent =
       "You said: " + text;
 
-    peterAwake = false;
+    // Stay active until the user explicitly asks PETER to sleep.
+    peterAwake = true;
 
-    // Answer immediately
+    // Answer immediately, then listen for the next command.
     peterCore(text);
 
   };
@@ -1095,6 +1097,24 @@ if (SpeechRecognition) {
     }, 600);
 
   }
+
+  // Try to arm hands-free listening automatically when the page opens.
+  // Some browsers require a one-time user gesture for microphone access.
+  window.addEventListener("load", () => {
+    setTimeout(() => {
+      if (!peterListening) {
+        try {
+          recognition.start();
+          peterListening = true;
+          peterAwake = false;
+          micBtn.textContent = "🔴 PETER listening";
+          speechText.textContent = 'Listening for "Peter"...';
+        } catch (e) {
+          console.log("PETER auto-start:", e);
+        }
+      }
+    }, 700);
+  });
 
 
 } else {
@@ -1208,6 +1228,29 @@ function findScheduleTarget(command){
   function peterCore(command) {
 
     command = command.toLowerCase().trim();
+
+    // SLEEP / HANDS-FREE OFF
+if (
+  command.includes("sleeping time") ||
+  command === "sleep" ||
+  command.includes("go to sleep") ||
+  command.includes("go sleep")
+) {
+
+  peterAwake = false;
+  peterListening = false;
+
+  try {
+    recognition.stop();
+  } catch (e) {}
+
+  micBtn.textContent = "😴 PETER sleeping";
+  speechText.textContent = "PETER is sleeping. Say Peter to wake me.";
+
+  peterSpeak("Going to sleep.");
+
+  return;
+}
 
     // TIME
 if (
