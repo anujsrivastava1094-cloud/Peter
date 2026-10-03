@@ -11,7 +11,7 @@ h2{margin:5px 0 4px;font-size:28px}.sub{color:var(--muted);font-size:13px;margin
 .editpanel{position:fixed;inset:0;background:#070707f5;z-index:20;display:none;overflow:auto}.editpanel.show{display:block}.editinner{max-width:760px;margin:auto;padding:18px 14px 45px}.edithead{display:flex;justify-content:space-between;align-items:center}.edithead h2{font-size:22px}.editnote{color:var(--muted);font-size:12px;line-height:1.5;margin-bottom:15px}.editor-card{border:1px solid var(--line);background:#101010;border-radius:15px;padding:13px;margin-bottom:9px}.editor-card label{display:block;color:#aaa;font-size:9px;text-transform:uppercase;letter-spacing:1px;margin:0 0 5px}.editor-card input,.editor-card textarea{width:100%;background:#090909;color:#fff;border:1px solid #2b2b2b;border-radius:10px;padding:9px;outline:none;margin-bottom:8px}.editor-card textarea{min-height:65px;resize:vertical}.row{display:flex;gap:7px;flex-wrap:wrap}.row button,.savebtn{border:1px solid #5c0b10;background:#26080a;color:#fff;border-radius:10px;padding:9px 12px}.savebtn{width:100%;background:var(--red);border-color:var(--red);font-weight:800;margin-top:8px}.danger{border-color:#333!important;background:#171717!important;color:#ff777d!important}.empty{padding:25px;text-align:center;color:#888;border:1px dashed #333;border-radius:14px;font-size:12px}
 @media(max-width:520px){.grid{grid-template-columns:1fr}.special{grid-column:span 1}.stats{grid-template-columns:1fr 1fr 1fr}}
 
-/* PETER v5 visual layer */
+/* PETER v6 visual layer */
 .topbar{display:flex;gap:8px;align-items:center;margin:0 0 13px}.pill{border:1px solid #2b2b2b;background:#101010;border-radius:999px;padding:7px 10px;font-size:10px;color:#aaa}.pill b{color:#fff}.pill.red{border-color:#4b0b10;color:#ff6970}.hero-dashboard{border:1px solid #3b1014;background:radial-gradient(circle at 85% 10%,#3a080c 0,#160607 35%,#0d0d0d 72%);border-radius:22px;padding:18px;margin-bottom:12px;box-shadow:0 15px 40px #0008}.hero-dashboard .eyebrow{font-size:9px;letter-spacing:2px;color:#ff626a;text-transform:uppercase}.hero-dashboard h2{margin:6px 0;font-size:27px}.hero-dashboard p{margin:0;color:#aaa;font-size:11px;line-height:1.5}.hero-row{display:flex;gap:8px;margin-top:14px}.mini-stat{flex:1;background:#0b0b0b99;border:1px solid #2b2020;border-radius:13px;padding:10px}.mini-stat b{font-size:18px}.mini-stat span{display:block;color:#777;font-size:8px;text-transform:uppercase;margin-top:2px}.quickbar{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0}.quick{border:1px solid #292929;background:#101010;color:#ddd;border-radius:13px;padding:10px 5px;font-size:10px}.quick:active{transform:scale(.97)}.searchbox{display:flex;gap:7px;margin:10px 0}.searchbox input{flex:1;background:#0d0d0d;border:1px solid #292929;color:#fff;border-radius:13px;padding:11px 12px;outline:none}.search-results{display:none;border:1px solid #292929;background:#101010;border-radius:14px;padding:8px;margin-bottom:10px}.search-results.show{display:block}.result{width:100%;border:0;background:none;color:#ddd;text-align:left;padding:10px;border-bottom:1px solid #222}.result:last-child{border:0}.result small{display:block;color:#777;margin-top:3px}.bottomnav{position:sticky;bottom:8px;z-index:8;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:#0b0b0bea;border:1px solid #2c2c2c;border-radius:18px;padding:6px;margin-top:14px;backdrop-filter:blur(12px)}.navbtn{border:0;background:none;color:#888;border-radius:13px;padding:9px 4px;font-size:9px}.navbtn b{display:block;color:#ddd;font-size:16px;margin-bottom:2px}.navbtn.active{background:#24080a;color:#ff6970}.navbtn.active b{color:#ff6970}.module.done{border-color:#2d5b42}.module.done .num{background:#10331f;color:#58e08f}.done-badge{float:right;color:#58e08f;font-size:9px}.note-card{border:1px solid #2b2b2b;background:#101010;border-radius:16px;padding:13px;margin-bottom:10px}.note-card textarea{width:100%;min-height:80px;background:#090909;border:1px solid #252525;color:#fff;border-radius:11px;padding:10px;resize:vertical;outline:none}.note-card button{margin-top:8px;border:1px solid #541017;background:#26080a;color:#fff;border-radius:10px;padding:9px 12px}.install-card{border:1px solid #4a1115;background:linear-gradient(145deg,#190708,#0e0e0e);border-radius:16px;padding:14px;margin:10px 0}.install-card strong{font-size:13px}.install-card p{font-size:10px;color:#999;line-height:1.5;margin:5px 0}.install-card button{border:0;background:var(--red);color:#fff;font-weight:800;border-radius:10px;padding:9px 12px}.toast{position:fixed;left:50%;bottom:25px;transform:translateX(-50%) translateY(20px);background:#f4f4f4;color:#090909;padding:10px 14px;border-radius:12px;font-size:11px;font-weight:700;opacity:0;pointer-events:none;transition:.2s;z-index:50}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media(max-width:520px){.quickbar{grid-template-columns:repeat(2,1fr)}.hero-row{gap:5px}.mini-stat{padding:9px 7px}}
   .peter-command-box{
@@ -80,7 +80,7 @@ h2{margin:5px 0 4px;font-size:28px}.sub{color:var(--muted);font-size:13px;margin
   </div>
   </div>
 <div class="searchbox"><input id="searchInput" placeholder="Search PETER systems, modules or tasks…" oninput="searchPETER(this.value)"></div><div class="search-results" id="searchResults"></div>
-<h2>Dashboard</h2><div class="sub">Your systems, roadmap and today's execution.</div><div class="grid" id="dashboard"></div><div class="section-title"><h3>Today</h3><span id="date"></span></div><div class="focus"><h3>⚡ Focus Mode</h3><p>Pick one thing. No switching. Use this when your brain starts jumping between projects.</p><button onclick="startFocus(25)">Start 25 min</button> <button onclick="startFocus(50)">Start 50 min</button><div class="timer" id="timer">25:00</div></div></div>
+<h2>Dashboard</h2><div class="sub">Your systems, roadmap, School, timeline and today's execution.</div><div class="grid" id="dashboard"></div><div class="section-title"><h3>Today</h3><span id="date"></span></div><div class="focus"><h3>⚡ Focus Mode</h3><p>Pick one thing. No switching. Use this when your brain starts jumping between projects.</p><button onclick="startFocus(25)">Start 25 min</button> <button onclick="startFocus(50)">Start 50 min</button><div class="timer" id="timer">25:00</div></div></div>
 <div id="detail" class="view"><div class="back"><button onclick="goHome()">← Dashboard</button></div><h2 id="detailTitle"></h2><div class="sub" id="detailSub"></div><div id="detailHero"></div><div id="roadmap"></div></div>
 <div id="timeline" class="view"><div class="back"><button onclick="goHome()">← Dashboard</button></div><h2>Today's Timeline</h2><div class="sub">Your full-day flow. Tap a slot to see what it means.</div><div class="timeline" id="timelineList"></div></div>
 <div id="tasks" class="view"><div class="back"><button onclick="goHome()">← Dashboard</button></div><h2>Today's Tasks</h2><div class="sub">Actionable instructions, not just task names.</div><div id="taskList"></div></div>
@@ -277,6 +277,15 @@ tasks:[
   {time:'22:00',title:'Sleep',items:['End the day','Prepare for sleep']}
 ]};
 let saved=localStorage.getItem('peter_v4');let data=saved?JSON.parse(saved):JSON.parse(JSON.stringify(defaultData));
+function ensureSchoolData(){
+  const defaultSchool=defaultData.blocks.find(x=>x.id==='school');
+  const existingIndex=data.blocks.findIndex(x=>x.id==='school');
+  if(defaultSchool && existingIndex===-1){
+    data.blocks.splice(Math.min(6,data.blocks.length),0,JSON.parse(JSON.stringify(defaultSchool)));
+  }
+  localStorage.setItem('peter_school_schema','2');
+}
+ensureSchoolData();
   // PETER DAY MODE
 let activeDayMode = localStorage.getItem('peter_day_mode') || 'normal';
 
@@ -290,7 +299,7 @@ function getStreak(){let d=JSON.parse(localStorage.getItem('peter_activity')||'[
 function touchActivity(){let d=JSON.parse(localStorage.getItem('peter_activity')||'[]');let today=new Date().toISOString().slice(0,10);if(!d.includes(today))d.push(today);localStorage.setItem('peter_activity',JSON.stringify(d.slice(-60)))}
 function renderHome(){
   let cards=data.blocks
-    .filter(b => b.id !== "school")
+    
     .map(b=>{
       let p=progressFor(b);
       return `<button class="card" onclick="openDetail('${esc(b.id)}')">
@@ -558,281 +567,144 @@ function renderHome(){
 
   showView('detail');
   }
-function toggleModule(i){let el=document.getElementById('mod'+i);el.classList.toggle('open')}
-  function openSchoolChapter(subjectName,subjectIndex,chapterIndex){
-
-  let school=data.blocks.find(x=>x.id==='school');
-
+function openSchoolByVoice(subjectName){
+  openDetail('school');
+  const school=data.blocks.find(x=>x.id==='school');
   if(!school)return;
+  const index=school.modules.findIndex(x=>x[0].toLowerCase().includes(subjectName.toLowerCase()));
+  if(index<0)return;
+  setTimeout(()=>{
+    const el=document.getElementById('schoolSubject'+index);
+    if(el){
+      el.classList.add('open');
+      el.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  },50);
+}
 
-  let subject=school.modules[subjectIndex];
+function toggleModule(i){let el=document.getElementById('mod'+i);el.classList.toggle('open')}
+  const SCHOOL_RESOURCE_LINKS = {
+    Physics: {
+      "Units and Measurements": {
+        class: "https://youtube.com/playlist?list=PLUd0NRwIz1s4&si=fP5wepV4IHqZQyEe",
+        module: ""
+      }
+    }
+  };
 
-  if(!subject)return;
-
-  let chapterName=subject[2][chapterIndex];
-
-  if(!chapterName)return;
-
-
-  // =================================
-  // PHYSICS → UNITS AND MEASUREMENTS
-  // =================================
-
-  let isPhysics=
-    subjectName.includes('Physics');
-
-  let isUnits=
-    chapterName==='Units and Measurements';
-
-
-  let classLink='';
-
-  if(isPhysics && isUnits){
-
-    classLink=
-      'https://youtube.com/playlist?list=PLUd0NRwIz1s4&si=fP5wepV4IHqZQyEe';
-
+  function schoolResourceKey(subject, chapter, type){
+    return "peter_school_" + subject + "_" + chapter + "_" + type;
   }
 
-
-  $('detailTitle').textContent=chapterName;
-
-  $('detailSub').textContent=
-    subjectName+' → '+chapterName;
-
-
-  $('detailHero').innerHTML=`
-
-    <div class="hero">
-
-      <h3>${esc(chapterName)}</h3>
-
-      <p>
-        Complete this chapter through
-        Class → NCERT → Module.
-      </p>
-
-      <div class="stats">
-
-        <div class="stat">
-          <b>3</b>
-          <span>Resources</span>
-        </div>
-
-        <div class="stat">
-          <b>0%</b>
-          <span>Progress</span>
-        </div>
-
-        <div class="stat">
-          <b>${esc(subjectName)}</b>
-          <span>Subject</span>
-        </div>
-
-      </div>
-
-    </div>
-
-  `;
-
-
-  $('roadmap').innerHTML=`
-
-    <!-- CLASS -->
-
-    <div class="module" id="schoolResourceClass">
-
-      <button onclick="toggleSchoolResource('schoolResourceClass')">
-
-        <span class="num">1</span>
-
-        <span>
-
-          <strong>🎥 Class</strong>
-
-          <small>
-            Watch your complete class resource.
-          </small>
-
-        </span>
-
-        <span class="arrow">›</span>
-
-      </button>
-
-      <div class="module-body">
-
-        <div class="detail-row">
-
-          <b>Class Resource</b>
-
-          ${
-            classLink
-            ?
-            `
-            <p>
-              Your class playlist for
-              ${esc(chapterName)}.
-            </p>
-
-            <a
-              href="${classLink}"
-              target="_blank"
-              rel="noopener"
-              style="
-                display:inline-block;
-                margin-top:10px;
-                padding:10px 13px;
-                background:#26080a;
-                border:1px solid #5c0b10;
-                border-radius:10px;
-                color:#fff;
-                text-decoration:none;
-                font-size:11px;
-                font-weight:700;
-              "
-            >
-              ▶ Open Class Playlist
-            </a>
-            `
-            :
-            `
-            <p>
-              Class resource will be added here.
-            </p>
-            `
-          }
-
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <!-- NCERT -->
-
-    <div class="module" id="schoolResourceNCERT">
-
-      <button onclick="toggleSchoolResource('schoolResourceNCERT')">
-
-        <span class="num">2</span>
-
-        <span>
-
-          <strong>📖 NCERT</strong>
-
-          <small>
-            Solve NCERT back exercises.
-          </small>
-
-        </span>
-
-        <span class="arrow">›</span>
-
-      </button>
-
-      <div class="module-body">
-
-        <div class="detail-row">
-
-          <b>NCERT Back Exercises</b>
-
-          <p>
-            Solve the complete NCERT back exercise
-            for ${esc(chapterName)}.
-          </p>
-
-          <label class="check">
-
-            <input
-              type="checkbox"
-              onchange="markSchoolResource(
-                '${esc(subjectName)}',
-                '${esc(chapterName)}',
-                'ncert',
-                this.checked
-              )"
-            >
-
-            <span>
-              NCERT back exercises completed
-            </span>
-
-          </label>
-
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <!-- MODULE -->
-
-    <div class="module" id="schoolResourceModule">
-
-      <button onclick="toggleSchoolResource('schoolResourceModule')">
-
-        <span class="num">3</span>
-
-        <span>
-
-          <strong>📘 Module</strong>
-
-          <small>
-            Complete your chapter module.
-          </small>
-
-        </span>
-
-        <span class="arrow">›</span>
-
-      </button>
-
-      <div class="module-body">
-
-        <div class="detail-row">
-
-          <b>Chapter Module</b>
-
-          <p>
-            Your module PDF will appear here
-            when it is added to PETER.
-          </p>
-
-          <p style="color:#777;">
-            Module file: awaiting upload
-          </p>
-
-          <label class="check">
-
-            <input
-              type="checkbox"
-              onchange="markSchoolResource(
-                '${esc(subjectName)}',
-                '${esc(chapterName)}',
-                'module',
-                this.checked
-              )"
-            >
-
-            <span>
-              Module completed
-            </span>
-
-          </label>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  `;
-
-  showView('detail');
+  function schoolResourceDone(subject, chapter, type){
+    return localStorage.getItem(schoolResourceKey(subject,chapter,type)) === "1";
   }
+
+  function openSchoolChapter(subjectName,subjectIndex,chapterIndex){
+    const school=data.blocks.find(x=>x.id==='school');
+    if(!school)return;
+
+    const subject=school.modules[subjectIndex];
+    if(!subject)return;
+
+    const chapterName=subject[2][chapterIndex];
+    if(!chapterName)return;
+
+    const links=(SCHOOL_RESOURCE_LINKS[subjectName]||{})[chapterName]||{};
+    const classDone=schoolResourceDone(subjectName,chapterName,'class');
+    const ncertDone=schoolResourceDone(subjectName,chapterName,'ncert');
+    const moduleDone=schoolResourceDone(subjectName,chapterName,'module');
+    const completed=[classDone,ncertDone,moduleDone].filter(Boolean).length;
+
+    $('detailTitle').textContent=chapterName;
+    $('detailSub').textContent=subjectName+' → '+chapterName;
+
+    $('detailHero').innerHTML=`
+      <div class="hero">
+        <h3>Chapter workflow</h3>
+        <p>Complete this chapter in order: Class → NCERT Exercise → Module.</p>
+        <div class="stats">
+          <div class="stat"><b>3</b><span>Steps</span></div>
+          <div class="stat"><b>${Math.round(completed/3*100)}%</b><span>Progress</span></div>
+          <div class="stat"><b>${esc(subjectName)}</b><span>Subject</span></div>
+        </div>
+      </div>
+      <button class="row button" onclick="openDetail('school')" style="margin:0 0 10px;border:1px solid #292929;background:#101010;color:#fff;border-radius:10px;padding:9px 12px;">
+        ← Back to ${esc(subjectName)}
+      </button>
+    `;
+
+    const classLink=links.class||"";
+    const moduleLink=links.module||"";
+
+    $('roadmap').innerHTML=`
+      <div class="module ${classDone?'done':''}" id="schoolResourceClass">
+        <button onclick="toggleSchoolResource('schoolResourceClass')">
+          <span class="num">1</span>
+          <span><strong>🎥 Class</strong><small>${classLink?'Open the class resource and complete the lesson.':'Class link pending — it can be connected here.'}</small></span>
+          <span class="arrow">›</span>
+        </button>
+        <div class="module-body">
+          <div class="detail-row">
+            <b>Class Resource</b>
+            ${classLink
+              ? `<p>Your class resource for ${esc(chapterName)}.</p>
+                 <a href="${classLink}" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;padding:10px 13px;background:#26080a;border:1px solid #5c0b10;border-radius:10px;color:#fff;text-decoration:none;font-size:11px;font-weight:700;">▶ Open Class</a>`
+              : `<p>Class link is waiting to be added. No fake link has been inserted.</p>`}
+            <label class="check">
+              <input type="checkbox" ${classDone?'checked':''}
+                onchange="markSchoolResource('${esc(subjectName)}','${esc(chapterName)}','class',this.checked)">
+              <span>Class completed</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="module ${ncertDone?'done':''}" id="schoolResourceNCERT">
+        <button onclick="toggleSchoolResource('schoolResourceNCERT')">
+          <span class="num">2</span>
+          <span><strong>📖 NCERT Exercise</strong><small>Solve the NCERT back exercise for this chapter.</small></span>
+          <span class="arrow">›</span>
+        </button>
+        <div class="module-body">
+          <div class="detail-row">
+            <b>NCERT Exercise</b>
+            <p>Solve the complete NCERT exercise for ${esc(chapterName)}.</p>
+            <label class="check">
+              <input type="checkbox" ${ncertDone?'checked':''}
+                onchange="markSchoolResource('${esc(subjectName)}','${esc(chapterName)}','ncert',this.checked)">
+              <span>NCERT exercise completed</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="module ${moduleDone?'done':''}" id="schoolResourceModule">
+        <button onclick="toggleSchoolResource('schoolResourceModule')">
+          <span class="num">3</span>
+          <span><strong>📘 Module</strong><small>${moduleLink?'Open and complete the chapter module.':'Module link pending — it can be connected here.'}</small></span>
+          <span class="arrow">›</span>
+        </button>
+        <div class="module-body">
+          <div class="detail-row">
+            <b>Chapter Module</b>
+            ${moduleLink
+              ? `<p>Module resource for ${esc(chapterName)}.</p>
+                 <a href="${moduleLink}" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;padding:10px 13px;background:#26080a;border:1px solid #5c0b10;border-radius:10px;color:#fff;text-decoration:none;font-size:11px;font-weight:700;">📘 Open Module</a>`
+              : `<p>Module link is waiting to be added. No fake link has been inserted.</p>`}
+            <label class="check">
+              <input type="checkbox" ${moduleDone?'checked':''}
+                onchange="markSchoolResource('${esc(subjectName)}','${esc(chapterName)}','module',this.checked)">
+              <span>Module completed</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    `;
+
+    showView('detail');
+  }
+
   function toggleSchoolResource(id){
 
   let el=document.getElementById(id);
@@ -843,39 +715,25 @@ function toggleModule(i){let el=document.getElementById('mod'+i);el.classList.to
 
   }
   function markSchoolResource(subject,chapter,type,checked){
-
-  let key=
-    'peter_school_' +
-    subject +
-    '_' +
-    chapter +
-    '_' +
-    type;
-
   localStorage.setItem(
-    key,
+    schoolResourceKey(subject,chapter,type),
     checked?'1':'0'
   );
 
   if(checked){
     touchActivity();
-
-    let n=
-      +localStorage.getItem(
-        'peter_completed_today'
-      )||0;
-
-    localStorage.setItem(
-      'peter_completed_today',
-      String(n+1)
-    );
-
-    showToast(
-      'Progress saved.'
-    );
+    let n=+localStorage.getItem('peter_completed_today')||0;
+    localStorage.setItem('peter_completed_today',String(n+1));
+    showToast('Progress saved.');
   }
 
+  const school=data.blocks.find(x=>x.id==='school');
+  const subjectIndex=school?school.modules.findIndex(x=>x[0]===subject):-1;
+  const chapterIndex=subjectIndex>=0?school.modules[subjectIndex][2].indexOf(chapter):-1;
+  if(subjectIndex>=0 && chapterIndex>=0){
+    openSchoolChapter(subject,subjectIndex,chapterIndex);
   }
+}
 function markModule(id,i,checked){localStorage.setItem('peter_done_'+id+'_'+i,checked?'1':'0');if(checked){touchActivity();let n=+localStorage.getItem('peter_completed_today')||0;localStorage.setItem('peter_completed_today',String(n+1));showToast('Module completed — progress saved.')}let b=data.blocks.find(x=>x.id===id);openDetail(id);renderHome();setTimeout(()=>{let el=document.getElementById('mod'+i);if(el)el.classList.add('open')},0)}
 function renderTimeline(){
 
@@ -1957,88 +1815,4 @@ document
     });
 </script>
 
-<!-- PETER SCHOOL MODULE -->
-
-<section id="schoolSection" style="display:none; padding:20px;">
-
-  <h1>📚 PETER SCHOOL</h1>
-
-  <p>Select a subject:</p>
-
-  <button onclick="openSubject('Physics')">Physics</button>
-  <button onclick="openSubject('Chemistry')">Chemistry</button>
-  <button onclick="openSubject('Mathematics')">Mathematics</button>
-  <button onclick="openSubject('English')">English</button>
-  <button onclick="openSubject('Physical Education')">
-    Physical Education
-  </button>
-
-  <div id="subjectArea" style="margin-top:20px;"></div>
-
-</section>
-
-<script>
-
-function openPeterSchool() {
-  document.querySelectorAll(".view").forEach(view => {
-    view.classList.remove("show");
-  });
-
-  document.getElementById("schoolSection").style.display = "block";
-}
-
-
-function openPeterSchoolSubject(subject) {
-  openPeterSchool();
-  openSubject(subject);
-  }
-  
-  
-  function openSubject(subject) {
-
-  const subjectArea = document.getElementById("subjectArea");
-
-  subjectArea.innerHTML = `
-    <h2>${subject}</h2>
-
-    <h3>Chapters</h3>
-
-    <button onclick="openChapter('${subject}', 'Chapter 1')">
-      Chapter 1
-    </button>
-
-    <button onclick="openChapter('${subject}', 'Chapter 2')">
-      Chapter 2
-    </button>
-
-    <button onclick="openChapter('${subject}', 'Chapter 3')">
-      Chapter 3
-    </button>
-  `;
-}
-
-function openChapter(subject, chapter) {
-
-  const subjectArea = document.getElementById("subjectArea");
-
-  subjectArea.innerHTML = `
-    <h2>${subject}</h2>
-    <h3>${chapter}</h3>
-
-    <hr>
-
-    <h3>🎥 Class</h3>
-    <p>Your class resource will appear here.</p>
-    <button>Open Class</button>
-
-    <h3>📖 NCERT</h3>
-    <p>Solve NCERT Back Exercises</p>
-<button>Solve NCERT Back Exercises</button>
-  
-    <h3>📘 Module</h3>
-    <p>Your module resource will appear here.</p>
-    <button>Open Module</button>
-  `;
-  }
-  
-</script></body></html>
+</body></html>
