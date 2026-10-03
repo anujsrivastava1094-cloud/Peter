@@ -893,6 +893,7 @@ let peterAwake = false;
 let peterListening = false;
 let recognition = null;
 let restarting = false;
+let recognitionRunning = false;
 let peterResponseLanguage = "en";
 let sleepRequested = false;
 
@@ -1004,7 +1005,8 @@ if(SpeechRecognition){
   }catch(e){}
 
   micBtn.onclick = () => {
-    if(peterListening){
+    // If PETER is already running, this button puts it to sleep.
+    if(peterListening && recognitionRunning){
       peterListening = false;
       peterAwake = false;
       restarting = false;
@@ -1015,15 +1017,25 @@ if(SpeechRecognition){
       return;
     }
 
+    // Start/retry the microphone. This also fixes the case where autoplay
+    // tried to start recognition before Android/Chrome granted microphone access.
     peterListening = true;
     peterAwake = false;
+    restarting = false;
     updatePeterMic();
-    speechText.textContent = 'Listening for "Peter"...';
+    speechText.textContent = 'Starting microphone… allow microphone access if Chrome asks.';
 
-    try{ recognition.start(); }catch(e){}
+    try{
+      recognition.start();
+    }catch(e){
+      speechText.textContent = "Tap Allow for microphone access, then tap PETER again.";
+      console.log("PETER manual microphone start:", e);
+    }
   };
 
   recognition.onstart = () => {
+    recognitionRunning = true;
+    speechText.textContent = peterAwake ? "PETER is listening." : 'Listening for "Peter"...';
     updatePeterMic();
   };
 
@@ -1066,8 +1078,11 @@ if(SpeechRecognition){
   };
 
   recognition.onend = () => {
+    recognitionRunning = false;
     if(peterListening && !speechSynthesis.speaking){
       restartPeterListening();
+    }else{
+      updatePeterMic();
     }
   };
 
@@ -1077,6 +1092,7 @@ if(SpeechRecognition){
     if(event.error==="not-allowed" || event.error==="service-not-allowed"){
       peterListening=false;
       peterAwake=false;
+      recognitionRunning=false;
       updatePeterMic();
       speechText.textContent="Microphone permission is required. Tap PETER once and allow it.";
       return;
@@ -1089,10 +1105,11 @@ if(SpeechRecognition){
 
   window.addEventListener("load",()=>{
     setTimeout(()=>{
-      peterListening=true;
+      // Do not claim the microphone is active until recognition.onstart fires.
+      peterListening=false;
       peterAwake=false;
+      recognitionRunning=false;
       updatePeterMic();
-      try{ recognition.start(); }catch(e){}
     },500);
   });
 }else{
