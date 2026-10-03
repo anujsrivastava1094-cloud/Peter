@@ -1353,8 +1353,189 @@ function peterGenericNavigation(command){
 
 /* Replace the old chapter/free helpers at runtime and make text + voice use
    exactly the same command router. */
+
+/* =========================
+   PETER AUTOMATION / REMINDER ENGINE
+   Timers + reminders + save-and-remind.
+   Uses localStorage and browser Notifications.
+   ========================= */
+const PETER_REMINDERS_KEY="peter_reminders_v1";
+const PETER_TIMERS_KEY="peter_timers_v1";
+let peterTimerIntervals={};
+
+function peterLoadJson(key){
+  try{return JSON.parse(localStorage.getItem(key)||"[]");}catch(e){return [];}
+}
+function peterSaveJson(key,value){
+  localStorage.setItem(key,JSON.stringify(value));
+}
+function peterNotify(title,message){
+  speechText.textContent=title+": "+message;
+  if("Notification" in window && Notification.permission==="granted"){
+    try{new Notification(title,{body:message});}catch(e){}
+  }
+  if(peterAwake || peterListening) peterSpeak(message);
+}
+async function peterRequestNotifications(){
+  if(!("Notification" in window)) return false;
+  if(Notification.permission==="granted") return true;
+  if(Notification.permission==="denied") return false;
+  try{return (await Notification.requestPermission())==="granted";}catch(e){return false;}
+}
+function peterFormatDateTime(ms){
+  return new Date(ms).toLocaleString("en-IN",{weekday:"short",day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});
+}
+function peterAddReminder(text,whenMs,leadMinutes){
+  const list=peterLoadJson(PETER_REMINDERS_KEY);
+  const item={
+    id:Date.now()+"_"+Math.random().toString(36).slice(2),
+    text:String(text).trim(),
+    when:Number(whenMs),
+    remindAt:Number(whenMs)-Number(leadMinutes||0)*60000,
+    leadMinutes:Number(leadMinutes||0),
+    done:false
+  };
+  list.push(item);
+  peterSaveJson(PETER_REMINDERS_KEY,list);
+  peterScheduleReminder(item);
+  return item;
+}
+function peterScheduleReminder(item){
+  if(!item || item.done) return;
+  const delay=Math.max(0,item.remindAt-Date.now());
+  setTimeout(function(){
+    const list=peterLoadJson(PETER_REMINDERS_KEY);
+    const current=list.find(x=>x.id===item.id);
+    if(!current || current.done) return;
+    current.done=true;
+    peterSaveJson(PETER_REMINDERS_KEY,list);
+    const lead=current.leadMinutes;
+    const prefix=lead>0 ? "Reminder: " : "It's time: ";
+    peterNotify(prefix,current.text+(lead>0 ? " is due in "+lead+" minutes.":""));
+  },delay);
+}
+function peterRestoreReminders(){
+  peterLoadJson(PETER_REMINDERS_KEY).forEach(function(item){
+    if(item.done) return;
+    if(item.remindAt<=Date.now()){
+      item.done=true;
+      peterNotify("Reminder",item.text+(item.leadMinutes>0 ? " is due now.":""));
+    }else peterScheduleReminder(item);
+  });
+  peterSaveJson(PETER_REMINDERS_KEY,peterLoadJson(PETER_REMINDERS_KEY));
+}
+function peterParseReminderDateTime(s){
+  const now=new Date();
+  let d=new Date(now);
+
+  if(/\btomorrow\b|\bkal\b/.test(s)) d.setDate(d.getDate()+1);
+  else if(/\btoday\b|\baaj\b/.test(s)) {}
+  else return null;
+
+  const time=peterParseSpokenTime(s);
+  if(time===null) return null;
+  d.setHours(Math.floor(time/60),time%60,0,0);
+  return d.getTime();
+}
+function peterParseDurationMinutes(s){
+  let m=s.match(/\b(\d+(?:\.\d+)?)\s*(?:minute|minutes|min|mins|m)\b/);
+  if(m) return Math.round(Number(m[1]));
+  const word={one:1,two:2,three:3,four:4,five:5,ten:10,fifteen:15,twenty:20,thirty:30,forty:40,sixty:60};
+  m=s.match(/\b(one|two|three|four|five|ten|fifteen|twenty|thirty|forty|sixty)\s*(?:minute|minutes|min|mins)\b/);
+  return m ? word[m[1]] : null;
+}
+function peterParseSaveReminder(s){
+  const lead=s.match(/\b(?:remind me|reminder)\b.*?\b(?:before|in)\s+(\d+)\s*(?:minute|minutes|min|mins)\b/);
+  if(!lead) return null;
+  let leadMinutes=Number(lead[1]);
+  let body=s
+    .replace(/\b(?:save it|save this|remember this)\b/g," ")
+    .replace(/\b(?:remind me|reminder)\b/g," ")
+    .replace(/\bbefore\s+\d+\s*(?:minute|minutes|min|mins)\b/g," ")
+    .replace(/\bin\s+\d+\s*(?:minute|minutes|min|mins)\b/g," ")
+    .replace(/\s+/g," ").trim();
+  return body ? {body:body,lead:leadMinutes}:null;
+}
+function peterAutomationCommand(s){
+  /* Immediate stop: no speech, no delayed restart. */
+  if(/\b(?:peter\s+)?stop\s+peter\b|\bstop\s+peter\b/.test(s)){
+    peterAwake=false;
+    peterListening=false;
+    sleepRequested=true;
+    peterVoiceBusy=false;
+    clearTimeout(peterRestartTimer);
+    try{speechSynthesis.cancel();}catch(e){}
+    try{recognition && recognition.abort();}catch(e){}
+    updatePeterMic();
+    speechText.textContent="PETER stopped.";
+    return true;
+  }
+
+  /* Timer: "3 minute timer", "timer for 3 minutes", "3 min ka timer". */
+  const timerMinutes=peterParseDurationMinutes(s);
+  if(timerMinutes && /\btimer\b/.test(s)){
+    const ends=Date.now()+timerMinutes*60000;
+    const id=Date.now()+"_"+Math.random().toString(36).slice(2);
+    const timers=peterLoadJson(PETER_TIMERS_KEY);
+    timers.push({id:id,ends:ends,minutes:timerMinutes,done:false});
+    peterSaveJson(PETER_TIMERS_KEY,timers);
+    clearTimeout(peterTimerIntervals[id]);
+    peterTimerIntervals[id]=setTimeout(function(){
+      const list=peterLoadJson(PETER_TIMERS_KEY);
+      const t=list.find(x=>x.id===id);
+      if(!t || t.done)return;
+      t.done=true;peterSaveJson(PETER_TIMERS_KEY,list);
+      peterNotify("PETER Timer","Your "+timerMinutes+" minute timer is finished.");
+      delete peterTimerIntervals[id];
+    },timerMinutes*60000);
+    peterSpeak("Timer set for "+timerMinutes+" minutes.");
+    return true;
+  }
+
+  /* Tomorrow/today reminder at a clock time. */
+  if(/\b(?:remind me|remember|reminder)\b/.test(s) &&
+     (/\b(?:tomorrow|kal|today|aaj)\b/.test(s)) &&
+     /\b(?:at|on)\b/.test(s)){
+    const when=peterParseReminderDateTime(s);
+    if(when){
+      const body=s
+        .replace(/\b(?:peter|remind me|remember|reminder|tomorrow|kal|today|aaj|at|on)\b/g," ")
+        .replace(/\b(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:am|pm)?\b/g," ")
+        .replace(/\s+/g," ").trim();
+      const item=peterAddReminder(body||"your reminder",when,0);
+      peterRequestNotifications();
+      peterSpeak("Okay. I will remind you on "+peterFormatDateTime(item.when)+".");
+      return true;
+    }
+  }
+
+  /* "Save it and remind me before 5 minutes" — stores the current utterance
+     as the reminder content when no separate event sentence is provided. */
+  const saveRem=peterParseSaveReminder(s);
+  if(saveRem){
+    const whenMatch=s.match(/\b(?:at|on)\s+([01]?\d|2[0-3])(?:\s*:\s*([0-5]\d))?\s*(am|pm)?\b/);
+    let when=null;
+    if(whenMatch){
+      let h=Number(whenMatch[1]), min=Number(whenMatch[2]||0), ap=(whenMatch[3]||"").toLowerCase();
+      if(ap==="pm"&&h!==12)h+=12;if(ap==="am"&&h===12)h=0;
+      const d=new Date();d.setHours(h,min,0,0);
+      if(d.getTime()<=Date.now())d.setDate(d.getDate()+1);
+      when=d.getTime();
+    }
+    if(when){
+      const item=peterAddReminder(saveRem.body,when,saveRem.lead);
+      peterRequestNotifications();
+      peterSpeak("Saved. I will remind you "+saveRem.lead+" minutes before it is due.");
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function peterProcessCommand(command){
   let s=peterNormalizeCommand(command).trim();
+  if(peterAutomationCommand(s)) return;
   if(!s) return;
 
   peterResponseLanguage="en";
@@ -1621,6 +1802,11 @@ function peterSpeak(text){
 }
 
 window.addEventListener("load",function(){
+  peterRestoreReminders();
+  if("Notification" in window && Notification.permission==="default"){
+    // Permission is requested only after a reminder is actually created.
+  }
+
   peterListening=false;
   peterAwake=false;
   sleepRequested=false;
