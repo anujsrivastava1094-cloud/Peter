@@ -1499,7 +1499,7 @@ function peterAutomationCommand(s){
     const when=peterParseReminderDateTime(s);
     if(when){
       const body=s
-        .replace(/\b(?:peter|remind me|remember|reminder|tomorrow|kal|today|aaj|at|on)\b/g," ")
+        .replace(/\b(?:peter|remind me|remember|reminder|tomorrow|kal|today|aaj|at|on|subah|subha|morning|shaam|sham|evening|baje|bajey)\b/g," ")
         .replace(/\b(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:am|pm)?\b/g," ")
         .replace(/\s+/g," ").trim();
       const item=peterAddReminder(body||"your reminder",when,0);
