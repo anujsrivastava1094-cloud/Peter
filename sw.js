@@ -1,4 +1,4 @@
-const CACHE = 'peter-v8';
+const CACHE = 'peter-v9';
 
 const APP_SHELL = [
   './',
@@ -31,11 +31,7 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
-
   const request = event.request;
-
-  // Always check the network first for HTML so new PETER builds
-  // appear promptly after a deployment.
   if (
     request.mode === 'navigate' ||
     request.destination === 'document' ||
@@ -48,18 +44,9 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE).then(cache => cache.put(request, copy));
           return response;
         })
-        .catch(() =>
-          caches.match(request).then(
-            cached => cached || caches.match('./index.html')
-          )
-        )
+        .catch(() => caches.match(request).then(cached => cached || caches.match('./index.html')))
     );
     return;
   }
-
-  // Static assets can use the cache, with a network fallback.
-  event.respondWith(
-    caches.match(request)
-      .then(cached => cached || fetch(request))
-  );
+  event.respondWith(caches.match(request).then(cached => cached || fetch(request)));
 });
