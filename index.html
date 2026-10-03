@@ -1676,7 +1676,33 @@ if(
 }
 
 
-// SHOW TODAY'S TASKS
+// NATURAL LANGUAGE — TODAY'S TASKS
+if (
+  command.includes("what do i have to do today") ||
+  command.includes("what do i need to do today") ||
+  command.includes("what should i do today") ||
+  command.includes("what do i have to do") ||
+  command.includes("what do i need to do")
+) {
+  showView("tasks");
+  peterSpeak("Here are your tasks for today.");
+  return;
+}
+
+
+// NATURAL LANGUAGE — TODAY'S TIMELINE
+if (
+  command.includes("what's on my schedule") ||
+  command.includes("what is on my schedule") ||
+  command.includes("show me my schedule") ||
+  command.includes("show me my timeline") ||
+  command.includes("i want to see my timeline")
+) {
+  showView("timeline");
+  peterSpeak("Here is your timeline for today.");
+  return;
+  }
+    // SHOW TODAY'S TASKS
 if(
   command.includes("show my tasks") ||
   command.includes("show today's tasks") ||
