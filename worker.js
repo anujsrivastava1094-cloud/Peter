@@ -153,6 +153,54 @@ export default {
       }, 400);
     }
 
+    if (url.pathname === "/api/command") {
+      if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
+
+      let body;
+      try { body = await request.json(); }
+      catch { return json({ ok: false, error: "Invalid JSON body" }, 400); }
+
+      const raw = typeof body?.command === "string" ? body.command.trim().slice(0, 500) : "";
+      if (!raw) return json({ ok: false, error: "Command is required" }, 400);
+
+      const s = raw.toLowerCase().replace(/[.,!?;:()[\]{}]/g, " ").replace(/\s+/g, " ").trim();
+      let intent = "chat";
+      let action = null;
+      let payload = {};
+
+      let m = s.match(/^(?:add|create|make) (?:a )?(?:task|todo|to do)(?: called| named| for| to)? (.+)$/);
+      if (m) {
+        intent = "action"; action = "add_task"; payload = { title: m[1].trim() };
+      } else if ((m = s.match(/^(?:finish|complete|done|mark) (?:my )?(?:task|todo|to do)(?: called| named)? (.+)$/))) {
+        intent = "action"; action = "complete_task"; payload = { title: m[1].trim() };
+      } else if ((m = s.match(/^(?:remember|remember this|don't let me forget|dont let me forget)(?: that)? (.+)$/))) {
+        intent = "action"; action = "add_note"; payload = { content: m[1].trim() };
+      } else if ((m = s.match(/^(?:save|add|take|make) (?:a )?(?:note|memo|capture)(?::| that| about| saying| says)? (.+)$/))) {
+        intent = "action"; action = "add_note"; payload = { content: m[1].trim() };
+      } else if (/^(?:stop|cancel) focus(?: mode)?$/.test(s)) {
+        intent = "action"; action = "stop_focus";
+      } else if ((m = s.match(/^(?:start|begin) focus(?: mode)?(?: for)? (\d{1,3}) ?(?:m|min|mins|minute|minutes)?$/))) {
+        intent = "action"; action = "start_focus"; payload = { minutes: Number(m[1]) };
+      } else if (/^(?:show|open) (?:my )?(?:tasks|todos|to dos)$/.test(s)) {
+        intent = "navigate"; action = "show_tasks";
+      } else if (/^(?:show|open) (?:my )?(?:notes|memos)$/.test(s)) {
+        intent = "navigate"; action = "show_notes";
+      } else if (/^(?:show|open) (?:today's |todays )?(?:timeline|schedule)$/.test(s)) {
+        intent = "navigate"; action = "show_timeline";
+      } else if (/^(?:go )?(?:home|dashboard)$/.test(s)) {
+        intent = "navigate"; action = "home";
+      }
+
+      return json({
+        ok: true,
+        intent,
+        action,
+        payload,
+        original: raw,
+        requiresAI: intent === "chat"
+      });
+    }
+
     if (url.pathname === "/api/plan") {
       if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
       if (!env.AI) return json({ ok: false, error: "Workers AI binding is not available" }, 503);
