@@ -1287,9 +1287,9 @@ function peterActionRouter(command){
     {re:/^(?:open|show|take me to)\\s+(?:jee|jee study|jee study plan)$/,action:function(){openDetail("jee");peterSpeak("Opening JEE study plan.");}},
     {re:/^(?:open|show|take me to)\\s+(?:calisthenics|training|workout)$/,action:function(){openDetail("calisthenics");peterSpeak("Opening Calisthenics.");}},
     {re:/^(?:open|show|take me to)\\s+(?:editing|edit)$/,action:function(){openDetail("editing");peterSpeak("Opening Editing.");}},
-    {re:/^(?:open|show|take me to)\\s+(?:advanced editing|cgi|vfx|cgi vfx)$/,action:function(){openDetail("advanced");peterSpeak("Opening Advanced Editing.");}},
+    {re:/^(?:open|show|take me to)\\s+(?:advanced editing|cgi|vfx|cgi vfx)$/,action:function(){openDetail("vfx");peterSpeak("Opening Advanced Editing.");}},
     {re:/^(?:open|show|take me to)\\s+(?:spidy senses|spidey senses|spidy sense|spidey sense)$/,action:function(){openDetail("spidy");peterSpeak("Opening Spidy Senses.");}},
-    {re:/^(?:open|show|take me to)\\s+(?:eyesight|improve eyesight)$/,action:function(){openDetail("eyesight");peterSpeak("Opening Eyesight.");}},
+    {re:/^(?:open|show|take me to)\\s+(?:eyesight|improve eyesight)$/,action:function(){openDetail("eyes");peterSpeak("Opening Eyesight.");}},
     {re:/^(?:show|open)\\s+(?:progress|my progress|progress report)$/,action:function(){showView("progress");peterSpeak("Opening progress.");}},
     {re:/^(?:show|open)\\s+(?:today(?:'s)? plan|daily plan|my plan)$/,action:function(){showView("timeline");peterSpeak("Opening today's plan.");}}
   ];
