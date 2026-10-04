@@ -1728,6 +1728,26 @@ function peterAutomationCommand(s){
 
 function peterProcessCommand(command){
   let s=peterNormalizeCommand(command).trim();
+
+  /* "Peter" by itself is a wake/attention command, not a normal PETER
+     system command. This also makes typed commands behave like voice wake. */
+  if(s === "peter"){
+    peterAwake=true;
+    peterListening=true;
+    sleepRequested=false;
+    updatePeterMic();
+    try{ openPeterVoiceMode(); }catch(e){}
+    peterSpeak("Yes, Boss.");
+    return;
+  }
+
+  /* If a wake word is accidentally included with a command, strip it before
+     routing so "Peter, open school" and "open school" behave identically. */
+  if(hasWakeWord(s)){
+    const stripped=peterStripWakeWord(s);
+    if(stripped) s=stripped;
+  }
+
   if(peterAutomationCommand(s)) return;
   if(!s) return;
 
