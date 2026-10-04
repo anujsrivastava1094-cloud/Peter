@@ -2288,11 +2288,19 @@ function peterProcessCommand(command){
   /* Wake-independent universal commands. */
   if(peterGenericNavigation(s)) return;
 
-  peterCloudCommand(s).then(function(handled){
-    if(handled) return;
-    peterAskCloudflareAI(s).then(function(ok){
-      if(!ok) peterSpeak("I can handle that if it matches one of my PETER systems. Try saying open school, open calisthenics, show timeline, show tasks, take a note, start focus, or go home.");
-    });
+  Promise.resolve().then(function(){
+    return peterCloudCommand(s);
+  }).then(function(handled){
+    if(handled) return true;
+    return peterAskCloudflareAI(s);
+  }).then(function(ok){
+    if(ok) return;
+    speechText.textContent="PETER could not reach its AI service. Local commands are still available.";
+    peterSpeak("I couldn't reach my AI service right now. Local PETER commands are still available.");
+  }).catch(function(error){
+    console.error("PETER command pipeline error:",error);
+    speechText.textContent="PETER command error: "+(error && error.message ? error.message : "unknown error");
+    peterSpeak("I hit an internal error while processing that command. Please try again.");
   });
 }
 
@@ -2326,7 +2334,7 @@ if(typeof SpeechRecognition !== "undefined" && !window.peterNativeMode){
   /* PETER v9 voice engine:
      Hindi/Hinglish-first recognition, continuous recovery, many alternatives,
      and live interruption while PETER is speaking. */
-  recognition.lang="hi-IN";
+  recognition.lang="en-IN";
   recognition.continuous=true;
   recognition.interimResults=false;
   recognition.maxAlternatives=10;
@@ -2347,6 +2355,10 @@ if(typeof SpeechRecognition !== "undefined" && !window.peterNativeMode){
   }catch(e){}
 
   micBtn.onclick=async function(){
+    if(!recognition){
+      speechText.textContent="PETER voice is unavailable in this browser.";
+      return;
+    }
     if(peterListening){
       peterListening=false;
       peterAwake=false;
@@ -2371,18 +2383,29 @@ if(typeof SpeechRecognition !== "undefined" && !window.peterNativeMode){
     speechText.textContent='Microphone ready. Say "Peter"...';
     updatePeterMic();
 
-    /* Start recognition directly from the user's tap.
-       Do not open a separate getUserMedia probe first: on Android Chrome
-       that extra async permission flow can cause SpeechRecognition itself
-       to return a misleading "not-allowed" error. SpeechRecognition will
-       request/use the microphone directly. */
+    /* Start from the real tap. If Chrome has not granted microphone
+       access yet, request it first, then hand control to SpeechRecognition. */
     try{
+      if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        stream.getTracks().forEach(function(track){track.stop();});
+      }
+      recognition.lang="en-IN";
       recognitionStarting=true;
       recognition.start();
     }catch(e){
       recognitionStarting=false;
-      console.error("PETER recognition start error:",e);
-      peterRestartListening(250);
+      console.error("PETER microphone start error:",e);
+      peterListening=false;
+      peterAwake=false;
+      sleepRequested=true;
+      updatePeterMic();
+      const name=e && e.name ? e.name : "";
+      if(name==="NotAllowedError" || name==="PermissionDeniedError"){
+        speechText.textContent="Microphone permission was denied. Allow microphone access for PETER in Chrome, then tap the mic again.";
+      }else{
+        speechText.textContent="PETER could not start the microphone: "+(e && e.message ? e.message : "unknown error");
+      }
     }
   };
 
