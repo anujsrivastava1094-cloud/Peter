@@ -33,10 +33,11 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != ACTION_PETER_COMMAND) return
             val command = intent.getStringExtra(EXTRA_COMMAND).orEmpty()
-            if (command.isNotBlank()) {
+            val wakeOnly = intent.getBooleanExtra(EXTRA_WAKE_ONLY, false)
+            if (wakeOnly) {
+                showPeterWake()
+            } else if (command.isNotBlank()) {
                 runPeterCommand(command)
-            } else {
-                showPeterListening()
             }
         }
     }
@@ -81,21 +82,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         webView.loadUrl(PETER_URL)
+        registerVoiceReceiver()
 
         requestRuntimePermissions()
     }
 
-    override fun onStart() {
-        super.onStart()
-        registerReceiver(voiceReceiver, IntentFilter(ACTION_PETER_COMMAND), RECEIVER_NOT_EXPORTED)
-    }
+    private var receiverRegistered = false
 
-    override fun onStop() {
-        try {
-            unregisterReceiver(voiceReceiver)
-        } catch (_: Exception) {
-        }
-        super.onStop()
+    private fun registerVoiceReceiver() {
+        if (receiverRegistered) return
+        registerReceiver(voiceReceiver, IntentFilter(ACTION_PETER_COMMAND), RECEIVER_NOT_EXPORTED)
+        receiverRegistered = true
     }
 
     override fun onResume() {
@@ -104,9 +101,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        try {
-            unregisterReceiver(voiceReceiver)
-        } catch (_: Exception) {
+        if (receiverRegistered) {
+            try {
+                unregisterReceiver(voiceReceiver)
+            } catch (_: Exception) {
+            }
+            receiverRegistered = false
         }
         webView.destroy()
         super.onDestroy()
@@ -150,15 +150,16 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun showPeterListening() {
+    private fun showPeterWake() {
         webView.evaluateJavascript(
             """
             (function(){
                 try {
                     if (typeof peterAwake !== 'undefined') peterAwake = true;
                     if (typeof peterListening !== 'undefined') peterListening = true;
+                    if (typeof sleepRequested !== 'undefined') sleepRequested = false;
                     if (typeof openPeterVoiceMode === 'function') openPeterVoiceMode();
-                    if (typeof peterSpeak === 'function') peterSpeak("I'm listening.");
+                    if (typeof peterSpeak === 'function') peterSpeak("Yes, Boss.");
                 } catch(e) {}
             })();
             """.trimIndent(),
@@ -205,6 +206,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val ACTION_PETER_COMMAND = "com.peter.personal.PETER_COMMAND"
         const val EXTRA_COMMAND = "command"
+        const val EXTRA_WAKE_ONLY = "wake_only"
         const val PREFS = "peter_native_voice"
         const val PENDING_COMMAND = "pending_command"
         const val PENDING_WAKE_ONLY = "pending_wake_only"
