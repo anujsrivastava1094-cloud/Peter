@@ -1982,7 +1982,9 @@ function peterSpeak(text){
 
   /* Keep recognition alive while speaking so "Peter stop" can interrupt. */
   speechSynthesis.cancel();
+  try{if(window.PeterNative) PeterNative.setSpeechBusy(false);}catch(e){}
   peterVoiceBusy=true;
+  try{if(window.PeterNative) PeterNative.setSpeechBusy(true);}catch(e){}
   peterUpdateVoiceModeFromState();
   updatePeterMic();
 
@@ -2009,12 +2011,14 @@ function peterSpeak(text){
 
   speech.onend=function(){
     peterVoiceBusy=false;
+    try{if(window.PeterNative) PeterNative.setSpeechBusy(false);}catch(e){}
     peterUpdateVoiceModeFromState();
     updatePeterMic();
     if(peterListening && !sleepRequested) peterRestartListening(50);
   };
   speech.onerror=function(){
     peterVoiceBusy=false;
+    try{if(window.PeterNative) PeterNative.setSpeechBusy(false);}catch(e){}
     peterUpdateVoiceModeFromState();
     updatePeterMic();
     if(peterListening && !sleepRequested) peterRestartListening(50);
