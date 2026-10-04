@@ -1779,6 +1779,28 @@ async function peterAskCloudflareAI(message){
   }
 }
 
+async function peterSaveMemory(text){
+  const value=String(text||"").trim();
+  if(!value) return false;
+  try{
+    const response=await fetch("https://peter.anujsrivastava1094.workers.dev/api/memory",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({key:"profile:"+peterBrainSession(),value:value})
+    });
+    const data=await response.json().catch(function(){return {};});
+    return !!(response.ok && data.ok);
+  }catch(e){console.error("PETER memory save error:",e);return false;}
+}
+
+async function peterLoadMemory(){
+  try{
+    const response=await fetch("https://peter.anujsrivastava1094.workers.dev/api/memory?key="+encodeURIComponent("profile:"+peterBrainSession()));
+    const data=await response.json().catch(function(){return {};});
+    return data.ok ? String(data.value||"") : "";
+  }catch(e){return "";}
+}
+
 function peterProcessCommand(command){
   let s=peterNormalizeCommand(command).trim();
 
@@ -1803,6 +1825,21 @@ function peterProcessCommand(command){
 
   if(peterAutomationCommand(s)) return;
   if(!s) return;
+
+  if(/^remember(?: that)?\\s+/i.test(s)){
+    const memoryText=s.replace(/^remember(?: that)?\\s+/i,"").trim();
+    peterSaveMemory(memoryText).then(function(ok){
+      peterSpeak(ok ? "Got it. I will remember that." : "I couldn't save that memory right now.");
+    });
+    return;
+  }
+
+  if(/^(?:what do you remember|what do you know about me|show my memory)$/i.test(s)){
+    peterLoadMemory().then(function(memory){
+      peterSpeak(memory ? "Here is what I currently remember: "+memory : "I don't have any saved personal memory yet.");
+    });
+    return;
+  }
 
   peterResponseLanguage="en";
 
