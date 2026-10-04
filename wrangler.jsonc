@@ -11,6 +11,27 @@
   "ai": {
     "binding": "AI"
   },
+  "d1_databases": [
+    {
+      "binding": "PETER_DB",
+      "database_name": "peter-db",
+      "database_id": "069180bf-673d-4bee-a022-cbda2ec9e426"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "PETER_MEMORY",
+      "id": "2ff40393e5714d6e90ccf348023c1522"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "PETER_EVENTS",
+        "queue": "peter-events"
+      }
+    ]
+  },
   "observability": {
     "enabled": true
   }
