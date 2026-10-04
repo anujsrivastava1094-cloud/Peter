@@ -1944,7 +1944,7 @@ async function peterSaveMemory(text){
   }catch(e){console.error("PETER memory save error:",e);return false;}
 }
 
-async function peterCloudCommand(command){
+async async function peterCloudCommand(command){
   try{
     const response=await fetch("/api/command",{
       method:"POST",headers:{"Content-Type":"application/json"},
