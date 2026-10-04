@@ -72,7 +72,7 @@ export default {
       const action = typeof body?.action === "string" ? body.action.trim().toLowerCase() : "";
 
       const key = "state:" + sessionId;
-      let state = { tasks: [], notes: [], focus: null, updatedAt: null };
+      let state = { tasks: [], notes: [], reminders: [], focus: null, updatedAt: null };
       try {
         const stored = await env.PETER_MEMORY.get(key);
         if (stored) state = { ...state, ...JSON.parse(stored) };
@@ -135,6 +135,46 @@ export default {
         return json({ ok: true, action, note, state });
       }
 
+      if (action === "add_reminder") {
+        const text = typeof body?.text === "string" ? body.text.trim().slice(0, 500) : "";
+        const when = Number(body?.when);
+        const remindAt = Number(body?.remindAt ?? when);
+        if (!text || !Number.isFinite(when) || !Number.isFinite(remindAt)) {
+          return json({ ok: false, error: "Reminder text and valid time are required" }, 400);
+        }
+        const reminder = {
+          id: crypto.randomUUID(),
+          text,
+          when,
+          remindAt,
+          leadMinutes: Math.max(0, Number(body?.leadMinutes) || 0),
+          done: false,
+          createdAt: now
+        };
+        state.reminders = Array.isArray(state.reminders) ? state.reminders : [];
+        state.reminders.unshift(reminder);
+        state.reminders = state.reminders.slice(0, 100);
+        await saveActionState();
+        return json({ ok: true, action, reminder, state });
+      }
+
+      if (action === "complete_reminder" || action === "cancel_reminder") {
+        const reminderId = typeof body?.reminderId === "string" ? body.reminderId : "";
+        state.reminders = Array.isArray(state.reminders) ? state.reminders : [];
+        const reminder = state.reminders.find(r => reminderId && r.id === reminderId);
+        if (!reminder) return json({ ok: false, error: "Reminder not found" }, 404);
+        reminder.done = true;
+        reminder.completedAt = now;
+        reminder.cancelled = action === "cancel_reminder";
+        await saveActionState();
+        return json({ ok: true, action, reminder, state });
+      }
+
+      if (action === "get_reminders") {
+        state.reminders = Array.isArray(state.reminders) ? state.reminders : [];
+        return json({ ok: true, action, reminders: state.reminders.filter(r => !r.done), state });
+      }
+
       if (action === "start_focus") {
         const minutes = Math.min(180, Math.max(1, Number(body?.minutes) || 25));
         state.focus = {
@@ -160,7 +200,7 @@ export default {
       return json({
         ok: false,
         error: "Unknown action",
-        supportedActions: ["add_task", "complete_task", "add_note", "start_focus", "stop_focus", "get_state"]
+        supportedActions: ["add_task", "complete_task", "add_note", "add_reminder", "complete_reminder", "cancel_reminder", "get_reminders", "start_focus", "stop_focus", "get_state"]
       }, 400);
     }
 
