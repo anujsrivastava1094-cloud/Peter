@@ -2019,7 +2019,7 @@ async function peterCloudCommand(command){
 
 async function peterLoadMemory(){
   try{
-    const response=await fetch(peterApi("/api/memory?key="+encodeURIComponent("profile:"+peterBrainSession()));
+    const response=await fetch(peterApi("/api/memory?key="+encodeURIComponent("profile:"+peterBrainSession())));
     const data=await response.json().catch(function(){return {};});
     return data.ok ? String(data.value||"") : "";
   }catch(e){return "";}
