@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - "android/**"
+      - "index.html"
       - ".github/workflows/android-apk.yml"
 
 permissions:
