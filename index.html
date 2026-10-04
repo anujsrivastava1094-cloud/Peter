@@ -1314,6 +1314,117 @@ function peterConditionalActionRouter(command){
   return true;
 }
 
+async function peterBackendAction(action,payload){
+  try{
+    const response=await fetch("https://peter.anujsrivastava1094.workers.dev/api/actions",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(Object.assign({action:action,sessionId:peterBrainSession()},payload||{}))
+    });
+    return await response.json().catch(function(){return {ok:false};});
+  }catch(e){
+    console.error("PETER action sync error:",e);
+    return {ok:false};
+  }
+}
+
+function peterActionEngine2(command){
+  const s=peterNormalizeCommand(command);
+
+  let m=s.match(/^(?:add|create|make) (?:a )?(?:task|todo)(?: called| named| for| to)? (.+)$/);
+  if(m){
+    const title=m[1].trim();
+    const tasks=data.tasks||[];
+    tasks.push({time:"Anytime",title:title,items:["Complete this task."]});
+    localStorage.setItem("peter_v4",JSON.stringify(data));
+    renderAll();
+    peterBackendAction("add_task",{title:title});
+    peterSpeak("Task added.");
+    return true;
+  }
+
+  m=s.match(/^(?:complete|finish|done|mark done) (?:my )?(?:task|todo)(?: called| named)? (.+)$/);
+  if(m){
+    const title=m[1].trim().toLowerCase();
+    const task=(data.tasks||[]).find(function(x){return String(x.title||"").toLowerCase()===title;});
+    if(task){
+      task.completed=true;
+      localStorage.setItem("peter_v4",JSON.stringify(data));
+      renderAll();
+      peterBackendAction("complete_task",{title:task.title});
+      peterSpeak("Task marked complete.");
+    }else{
+      peterSpeak("I couldn't find that task.");
+    }
+    return true;
+  }
+
+  m=s.match(/^(?:start|begin) focus(?: mode)?(?: for)? (\d{1,3}) ?(?:m|min|mins|minute|minutes)?$/);
+  if(m){
+    const minutes=Math.min(180,Math.max(1,Number(m[1])));
+    startFocus(minutes);
+    peterBackendAction("start_focus",{minutes:minutes});
+    peterSpeak("Starting a "+minutes+" minute focus session.");
+    return true;
+  }
+
+  if(/^(?:stop|cancel) focus(?: mode)?$/.test(s)){
+    clearInterval(focusTimer);
+    peterBackendAction("stop_focus",{});
+    peterSpeak("Focus mode stopped.");
+    return true;
+  }
+
+  m=s.match(/^(?:save|add|take|make) (?:a )?(?:note|memo|capture)(?::| that| about| saying| says)? (.+)$/);
+  if(m){
+    const content=m[1].trim();
+    const notes=JSON.parse(localStorage.getItem("peter_notes")||"[]");
+    notes.push({text:content,date:new Date().toLocaleString()});
+    localStorage.setItem("peter_notes",JSON.stringify(notes.slice(-30)));
+    renderNotes();
+    peterBackendAction("add_note",{content:content});
+    peterSpeak("Note saved.");
+    return true;
+  }
+
+  return false;
+}
+
+function peterConditionalAutomation(command){
+  const s=peterNormalizeCommand(command);
+  const m=s.match(/^if (?:i am |im )?free (?:at|around) (.+?) (?:then|phir|fir|,)?\s*(.*)$/);
+  if(!m) return false;
+  const timePart=m[1].trim();
+  const action=m[2].trim();
+  const minutes=peterParseSpokenTime(timePart);
+  if(minutes===null) return false;
+
+  const schedule=typeof getActiveSchedule==="function"?getActiveSchedule():null;
+  const item=schedule&&schedule.timeline ? schedule.timeline.find(function(x){
+    const start=timeToMinutes(x.start), end=timeToMinutes(x.end);
+    return minutes>=start && minutes<end;
+  }):null;
+
+  if(item){
+    peterSpeak("You are not free at "+timePart+". You have "+item.title+" then.");
+    return true;
+  }
+
+  if(/\b(?:remind|reminder)\b/.test(action)){
+    const body=action.replace(/^(?:remind me|reminder)\s*/,"").trim()||"your reminder";
+    const now=new Date();
+    now.setHours(Math.floor(minutes/60),minutes%60,0,0);
+    if(now.getTime()<=Date.now()) now.setDate(now.getDate()+1);
+    peterAddReminder(body,now.getTime(),0);
+    peterRequestNotifications();
+    peterSpeak("You're free at "+timePart+". I scheduled the reminder.");
+    return true;
+  }
+
+  peterSpeak("You're free at "+timePart+". I couldn't identify the requested follow-up action.");
+  return true;
+}
+
 function peterMultiActionRouter(command){
   const s=peterNormalizeCommand(command);
   if(!/\b(?:and|then|after that|phir|fir|aur|uske baad)\b/.test(s)) return false;
