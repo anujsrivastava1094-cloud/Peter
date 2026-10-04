@@ -139,9 +139,12 @@ export default {
         ? body.sessionId.trim().slice(0, 120)
         : "default";
       let savedMemory = "";
+      let profileMemory = "";
       if (env.PETER_MEMORY) {
         try {
           savedMemory = (await env.PETER_MEMORY.get("conversation:" + sessionId)) || "";
+          profileMemory = (await env.PETER_MEMORY.get("profile:" + sessionId)) || "";
+          if (!profileMemory) profileMemory = (await env.PETER_MEMORY.get("profile:default")) || "";
         } catch {}
       }
       if (!message) {
