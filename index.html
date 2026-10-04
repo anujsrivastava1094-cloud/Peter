@@ -1726,6 +1726,24 @@ function peterAutomationCommand(s){
   return false;
 }
 
+async function peterAskCloudflareAI(message){
+  const endpoint="https://peter.anujsrivastava1094.workers.dev/api/ai";
+  try{
+    const response=await fetch(endpoint,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({message:String(message||"").slice(0,4000)})
+    });
+    const data=await response.json().catch(function(){return {};});
+    if(!response.ok || !data.ok || !data.response) return false;
+    peterSpeak(String(data.response));
+    return true;
+  }catch(error){
+    console.error("PETER Cloudflare AI error:",error);
+    return false;
+  }
+}
+
 function peterProcessCommand(command){
   let s=peterNormalizeCommand(command).trim();
 
@@ -1808,7 +1826,7 @@ function peterProcessCommand(command){
   /* Wake-independent universal commands. */
   if(peterGenericNavigation(s)) return;
 
-  peterSpeak("I can handle that if it matches one of my PETER systems. Try saying open school, open calisthenics, show timeline, show tasks, take a note, start focus, or go home.");
+  peterAskCloudflareAI(s).then(function(ok){\n    if(!ok) peterSpeak("I can handle that if it matches one of my PETER systems. Try saying open school, open calisthenics, show timeline, show tasks, take a note, start focus, or go home.");\n  });
 }
 
 /* Make the old core point to the same router for typed commands too. */
