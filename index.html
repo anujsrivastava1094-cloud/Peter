@@ -1346,7 +1346,7 @@ function peterConditionalActionRouter(command){
 
 async function peterBackendAction(action,payload){
   try{
-    const response=await fetch(peterApi("/api/actions")),{
+    const response=await fetch(peterApi("/api/actions"),{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(Object.assign({action:action,sessionId:peterBrainSession()},payload||{}))
@@ -1654,7 +1654,7 @@ function peterFormatDateTime(ms){
 async function peterSyncReminderRemote(item){
   if(!item || item.done) return null;
   try{
-    const response=await fetch(peterApi("/api/actions")),{
+    const response=await fetch(peterApi("/api/actions"),{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
@@ -1902,7 +1902,7 @@ async function peterAskPlan(requestText){
   const text=String(requestText||"").trim();
   if(!text) return false;
   try{
-    const response=await fetch(peterApi("/api/plan")),{
+    const response=await fetch(peterApi("/api/plan"),{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({request:text.slice(0,6000)})
@@ -1964,7 +1964,7 @@ async function peterSaveMemory(text){
 
 async function peterCloudCommand(command){
   try{
-    const response=await fetch(peterApi("/api/command")),{
+    const response=await fetch(peterApi("/api/command"),{
       method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({command:String(command||"").slice(0,500),sessionId:peterBrainSession()})
     });
@@ -2014,7 +2014,7 @@ async function peterRemoteAction(action,payload){
       sessionId:peterBrainSession(),
       action:action
     },payload||{});
-    const response=await fetch(peterApi("/api/actions")),{
+    const response=await fetch(peterApi("/api/actions"),{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(body)
