@@ -909,7 +909,7 @@ function updateDayModeUI(){
 }
   updateDayModeUI();
 function renderTasks(){$('taskList').innerHTML=data.tasks.map(x=>`<div class="taskbox"><h4>${esc(x.time)} · ${esc(x.title)}</h4><ul>${x.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`).join('')}
-function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('show'));$(id).classList.add('show');window.scrollTo(0,0)}function goHome(){showView('home')}
+function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('show'));$(id).classList.add('show');window.scrollTo(0,0);if(id==="tasks"&&typeof peterSyncRemoteActions==="function")peterSyncRemoteActions()}function goHome(){showView('home')}
 function openEdit(){buildEditor();$('editPanel').classList.add('show')}function closeEdit(){$('editPanel').classList.remove('show')}
 function buildEditor(){let e='<div class="section-title"><h3>Dashboard blocks</h3></div>';data.blocks.forEach((b,i)=>{e+=`<div class="editor-card"><label>Title</label><input data-t="b" data-i="${i}" data-k="title" value="${attr(b.title)}"><label>Description</label><input data-t="b" data-i="${i}" data-k="desc" value="${attr(b.desc)}"><label>Mission</label><textarea data-t="b" data-i="${i}" data-k="goal">${esc(b.goal)}</textarea><label>Icon</label><input data-t="b" data-i="${i}" data-k="icon" value="${attr(b.icon)}"><div class="row"><button onclick="moveBlock(${i},-1)">↑</button><button onclick="moveBlock(${i},1)">↓</button><button class="danger" onclick="deleteBlock(${i})">Delete</button></div></div>`});e+='<button class="savebtn" onclick="addBlock()">+ Add dashboard block</button><div class="section-title"><h3>Timeline</h3></div>';data.timeline.forEach((x,i)=>{e+=`<div class="editor-card"><label>Time</label><input data-t="tl" data-i="${i}" data-k="time" value="${attr(x.time)}"><label>Title</label><input data-t="tl" data-i="${i}" data-k="title" value="${attr(x.title)}"><label>Description</label><textarea data-t="tl" data-i="${i}" data-k="desc">${esc(x.desc)}</textarea></div>`});e+='<div class="section-title"><h3>Today\'s tasks</h3></div>';data.tasks.forEach((x,i)=>{e+=`<div class="editor-card"><label>Time</label><input data-t="tk" data-i="${i}" data-k="time" value="${attr(x.time)}"><label>Title</label><input data-t="tk" data-i="${i}" data-k="title" value="${attr(x.title)}"><label>Instructions, one per line</label><textarea data-t="tk" data-i="${i}" data-k="items">${esc(x.items.join('\n'))}</textarea></div>`});$('editor').innerHTML=e}
 function syncEditor(){document.querySelectorAll('#editor [data-t]').forEach(el=>{let t=el.dataset.t,i=+el.dataset.i,k=el.dataset.k,v=el.value;if(t==='b')data.blocks[i][k]=v;else if(t==='tl')data.timeline[i][k]=v;else{if(k==='items')v=v.split('\n').map(s=>s.trim()).filter(Boolean);data.tasks[i][k]=v}})}
@@ -1880,6 +1880,105 @@ async function peterLoadMemory(){
   }catch(e){return "";}
 }
 
+async function peterRemoteAction(action,payload){
+  try{
+    const body=Object.assign({
+      sessionId:peterBrainSession(),
+      action:action
+    },payload||{});
+    const response=await fetch("https://peter.anujsrivastava1094.workers.dev/api/actions",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(body)
+    });
+    const data=await response.json().catch(function(){return {};});
+    if(!response.ok || !data.ok) return null;
+    if(data.state){
+      localStorage.setItem("peter_action_state",JSON.stringify(data.state));
+      renderRemoteActionState(data.state);
+    }
+    return data;
+  }catch(error){
+    console.error("PETER Action Engine error:",error);
+    return null;
+  }
+}
+
+function renderRemoteActionState(state){
+  const list=document.getElementById("taskList");
+  if(!list || !state) return;
+  let box=document.getElementById("peterRemoteTasks");
+  if(!box){
+    box=document.createElement("div");
+    box.id="peterRemoteTasks";
+    list.prepend(box);
+  }
+  const tasks=Array.isArray(state.tasks)?state.tasks:[];
+  if(!tasks.length){
+    box.innerHTML="";
+    return;
+  }
+  box.innerHTML='<div class="section-title"><h3>PETER Action Tasks</h3><span>Persistent</span></div>'+
+    tasks.slice(0,20).map(function(t){
+      const done=t.status==="completed";
+      return '<div class="taskbox" style="'+(done?"opacity:.55":"")+'">'+
+        '<h4>'+esc(done?"✓ "+t.title:t.title)+'</h4>'+
+        '<p style="margin:0;color:#888;font-size:10px">'+esc(done?"Completed":"Pending")+'</p>'+
+        '</div>';
+    }).join("");
+}
+
+async function peterSyncRemoteActions(){
+  const data=await peterRemoteAction("get_state");
+  return !!data;
+}
+
+function peterRemoteActionCommand(command){
+  const s=peterNormalizeCommand(command);
+
+  let m=s.match(/^(?:add|create|make)\s+(?:a\s+)?(?:task|todo|to do)\s+(?:to\s+)?(.+)$/i);
+  if(m){
+    const title=m[1].trim();
+    if(!title) return true;
+    peterRemoteAction("add_task",{title:title}).then(function(data){
+      if(data){
+        showView("tasks");
+        peterSpeak("Task added: "+title+".");
+      }else{
+        peterSpeak("I couldn't save that task right now.");
+      }
+    });
+    return true;
+  }
+
+  m=s.match(/^(?:complete|finish|done|mark)\s+(?:the\s+)?(?:task|todo|to do)\s+(.+)$/i);
+  if(m){
+    const title=m[1].trim();
+    peterRemoteAction("complete_task",{title:title}).then(function(data){
+      if(data && data.action && data.action.updated){
+        showView("tasks");
+        peterSpeak("Task completed: "+title+".");
+      }else if(data){
+        peterSpeak("I couldn't find that task.");
+      }else{
+        peterSpeak("I couldn't update that task right now.");
+      }
+    });
+    return true;
+  }
+
+  if(/^(?:show|open)\s+(?:my\s+)?action\s+tasks?$/i.test(s)){
+    peterSyncRemoteActions().then(function(ok){
+      showView("tasks");
+      if(!ok) peterSpeak("I couldn't load the persistent action tasks right now.");
+      else peterSpeak("Here are PETER's persistent action tasks.");
+    });
+    return true;
+  }
+
+  return false;
+}
+
 function peterProcessCommand(command){
   let s=peterNormalizeCommand(command).trim();
 
@@ -1902,6 +2001,7 @@ function peterProcessCommand(command){
     if(stripped) s=stripped;
   }
 
+  if(peterRemoteActionCommand(s)) return;
   if(peterAutomationCommand(s)) return;
   if(!s) return;
 
