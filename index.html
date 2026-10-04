@@ -2197,14 +2197,27 @@ function getMinutesRemaining(item){
   const now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
   return Math.max(0,timeToMinutes(item.end)-nowMin);
 }
-async function peterCreateTask(title){
+async async function peterCreateTask(title){
   const clean=String(title||"").trim();
   if(!clean)return false;
-  const result=await peterRemoteAction("add_task",{title:clean});
-  if(result)return true;
-  data.tasks.push({time:new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}),title:clean,items:["Added by PETER."]});
+
+  /* Fast path: update the local PETER task list immediately.
+     Remote persistence happens in the background so voice response does not
+     wait for network latency. */
+  const localTask={time:new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}),title:clean,items:["Added by PETER."]};
+  data.tasks=data.tasks||[];
+  data.tasks.push(localTask);
   localStorage.setItem("peter_v4",JSON.stringify(data));
   renderTasks();
+
+  /* Best-effort background sync. The task already exists locally, so this
+     must never block the user's response. */
+  peterRemoteAction("add_task",{title:clean}).then(function(result){
+    if(result){
+      try{localStorage.setItem("peter_action_state",JSON.stringify(result.state||{}));}catch(e){}
+    }
+  }).catch(function(e){console.warn("PETER background task sync:",e);});
+
   return true;
 }
 async function peterCompleteTask(title){
@@ -2655,7 +2668,7 @@ function peterSpeak(text){
 
   const speech=new SpeechSynthesisUtterance(spoken);
   speech.lang="en-IN";
-  speech.rate=1.05;
+  speech.rate=1.18;
   speech.pitch=0.72;
   speech.volume=1;
 
