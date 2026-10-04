@@ -70,11 +70,13 @@ export default {
           ]
         });
 
-        const response = typeof result?.response === "string"
-          ? result.response
-          : typeof result?.result === "string"
-            ? result.result
-            : result?.response?.text || result?.result?.response || JSON.stringify(result);
+        const response = typeof result?.choices?.[0]?.message?.content === "string"
+          ? result.choices[0].message.content.trim()
+          : typeof result?.response === "string"
+            ? result.response.trim()
+            : typeof result?.result === "string"
+              ? result.result.trim()
+              : "";
 
         return json({
           ok: true,
