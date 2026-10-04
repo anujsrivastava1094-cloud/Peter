@@ -1948,7 +1948,7 @@ async function peterRemoteAction(action,payload){
     if(!response.ok || !data.ok) return null;
     if(data.state){
       localStorage.setItem("peter_action_state",JSON.stringify(data.state));
-      renderRemoteActionState(data.state);
+      renderRemoteActionState(data.state); renderRemoteActionNotes(data.state);
     }
     return data;
   }catch(error){
@@ -1981,7 +1981,20 @@ function renderRemoteActionState(state){
     }).join("");
 }
 
-async function peterSyncRemoteActions(){
+async function renderRemoteActionNotes(state){
+  const list=document.getElementById("notesList");
+  if(!list || !state) return;
+  let box=document.getElementById("peterRemoteNotes");
+  if(!box){box=document.createElement("div");box.id="peterRemoteNotes";list.prepend(box);}
+  const notes=Array.isArray(state.notes)?state.notes:[];
+  if(!notes.length){box.innerHTML="";return;}
+  box.innerHTML='<div class="section-title"><h3>PETER Persistent Notes</h3><span>Synced</span></div>'+
+    notes.slice(0,20).map(function(n){
+      return '<div class="note-card"><p style="margin:0;color:#ccc;font-size:11px;line-height:1.5">'+esc(n.content||"")+'</p><small style="display:block;color:#666;margin-top:7px">'+esc(n.createdAt||"")+'</small></div>';
+    }).join("");
+}
+
+function peterSyncRemoteActions(){
   const data=await peterRemoteAction("get_state");
   return !!data;
 }
@@ -2000,6 +2013,17 @@ function peterRemoteActionCommand(command){
       }else{
         peterSpeak("I couldn't save that task right now.");
       }
+    });
+    return true;
+  }
+
+  m=s.match(/^(?:add|save|take|make)\s+(?:a\s+)?(?:note|memo|capture)\s*(?::|that|about|saying|says)?\s*(.+)$/i);
+  if(m){
+    const content=m[1].trim();
+    if(!content) return true;
+    peterRemoteAction("add_note",{content:content}).then(function(data){
+      if(data){ showView("notes"); peterSpeak("Saved that note."); }
+      else peterSpeak("I couldn't save that note right now.");
     });
     return true;
   }
