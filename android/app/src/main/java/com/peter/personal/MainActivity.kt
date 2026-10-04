@@ -118,7 +118,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun registerVoiceReceiver() {
         if (receiverRegistered) return
-        registerReceiver(voiceReceiver, IntentFilter(ACTION_PETER_COMMAND), RECEIVER_NOT_EXPORTED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(voiceReceiver, IntentFilter(ACTION_PETER_COMMAND), RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(voiceReceiver, IntentFilter(ACTION_PETER_COMMAND))
+        }
         receiverRegistered = true
     }
 
