@@ -1,4 +1,4 @@
-const CACHE = 'peter-v12';
+const CACHE = 'peter-v13';
 
 const APP_SHELL = [
   './',
@@ -48,5 +48,5 @@ self.addEventListener('fetch', event => {
     );
     return;
   }
-  event.respondWith(caches.match(request).then(cached => cached || fetch(request)));
+  event.respondWith(fetch(request).then(response => { if (response && response.ok && request.destination !== 'document') { const copy=response.clone(); caches.open(CACHE).then(cache=>cache.put(request,copy)); } return response; }).catch(() => caches.match(request)));
 });
