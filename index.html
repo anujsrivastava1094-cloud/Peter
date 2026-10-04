@@ -1291,6 +1291,7 @@ function peterMultiActionRouter(command){
     parts.forEach(function(part){
       let handled=false;
       if(peterAutomationCommand(part)) handled=true;
+      else if(peterRemoteActionCommand(part)) handled=true;
       else if(peterActionRouter(part)) handled=true;
       else if(peterGenericNavigation(part)) handled=true;
       if(handled) results.push(part);
@@ -1955,7 +1956,7 @@ function peterRemoteActionCommand(command){
   if(m){
     const title=m[1].trim();
     peterRemoteAction("complete_task",{title:title}).then(function(data){
-      if(data && data.action && data.action.updated){
+      if(data && data.action === "complete_task" && data.task && data.task.status === "completed"){
         showView("tasks");
         peterSpeak("Task completed: "+title+".");
       }else if(data){
@@ -1963,6 +1964,26 @@ function peterRemoteActionCommand(command){
       }else{
         peterSpeak("I couldn't update that task right now.");
       }
+    });
+    return true;
+  }
+
+  m=s.match(/^(?:start|begin)\s+(?:a\s+)?(\d+|one|two|three|four|five|ten|fifteen|twenty|twenty-five|thirty|forty|fifty)\s*(?:minute|min)\s+(?:focus|focus session)$/i);
+  if(m){
+    const words={one:1,two:2,three:3,four:4,five:5,ten:10,fifteen:15,twenty:20,"twenty-five":25,thirty:30,forty:40,fifty:50};
+    const minutes=Number(m[1])||words[m[1]]||25;
+    startFocus(minutes);
+    peterRemoteAction("start_focus",{minutes:minutes}).then(function(data){
+      if(data) peterSpeak("Focus started for "+minutes+" minutes.");
+      else peterSpeak("Focus started locally, but I couldn't sync it.");
+    });
+    return true;
+  }
+
+  if(/^(?:stop|end|cancel)\s+(?:focus|focus mode|focus session)$/i.test(s)){
+    clearInterval(focusTimer);
+    peterRemoteAction("stop_focus").then(function(data){
+      peterSpeak(data ? "Focus mode stopped." : "Focus stopped locally, but sync failed.");
     });
     return true;
   }
