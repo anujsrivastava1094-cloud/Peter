@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -29,7 +30,10 @@ jobs:
         uses: actions/upload-pages-artifact@v4
         with:
           path: '.'
+          name: github-pages-${{ github.run_id }}
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_id }}
