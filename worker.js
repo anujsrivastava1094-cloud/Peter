@@ -59,6 +59,100 @@ export default {
       return json({ ok: false, error: "Method not allowed" }, 405);
     }
 
+    if (url.pathname === "/api/actions") {
+      if (!env.PETER_MEMORY) return json({ ok: false, error: "Action storage is not available" }, 503);
+
+      let body;
+      try { body = await request.json(); }
+      catch { return json({ ok: false, error: "Invalid JSON body" }, 400); }
+
+      const sessionId = typeof body?.sessionId === "string" && body.sessionId.trim()
+        ? body.sessionId.trim().slice(0, 120)
+        : "default";
+      const action = typeof body?.action === "string" ? body.action.trim().toLowerCase() : "";
+
+      const key = "state:" + sessionId;
+      let state = { tasks: [], notes: [], focus: null, updatedAt: null };
+      try {
+        const stored = await env.PETER_MEMORY.get(key);
+        if (stored) state = { ...state, ...JSON.parse(stored) };
+      } catch {}
+
+      const now = new Date().toISOString();
+
+      if (action === "add_task") {
+        const title = typeof body?.title === "string" ? body.title.trim().slice(0, 300) : "";
+        if (!title) return json({ ok: false, error: "Task title is required" }, 400);
+        const task = {
+          id: crypto.randomUUID(),
+          title,
+          status: "pending",
+          createdAt: now
+        };
+        state.tasks.unshift(task);
+        state.tasks = state.tasks.slice(0, 100);
+        state.updatedAt = now;
+        await env.PETER_MEMORY.put(key, JSON.stringify(state));
+        return json({ ok: true, action, task, state });
+      }
+
+      if (action === "complete_task") {
+        const taskId = typeof body?.taskId === "string" ? body.taskId : "";
+        const title = typeof body?.title === "string" ? body.title.trim().toLowerCase() : "";
+        const task = state.tasks.find(t =>
+          (taskId && t.id === taskId) ||
+          (title && t.title.toLowerCase() === title)
+        );
+        if (!task) return json({ ok: false, error: "Task not found" }, 404);
+        task.status = "completed";
+        task.completedAt = now;
+        state.updatedAt = now;
+        await env.PETER_MEMORY.put(key, JSON.stringify(state));
+        return json({ ok: true, action, task, state });
+      }
+
+      if (action === "add_note") {
+        const content = typeof body?.content === "string" ? body.content.trim().slice(0, 2000) : "";
+        if (!content) return json({ ok: false, error: "Note content is required" }, 400);
+        const note = { id: crypto.randomUUID(), content, createdAt: now };
+        state.notes.unshift(note);
+        state.notes = state.notes.slice(0, 100);
+        state.updatedAt = now;
+        await env.PETER_MEMORY.put(key, JSON.stringify(state));
+        return json({ ok: true, action, note, state });
+      }
+
+      if (action === "start_focus") {
+        const minutes = Math.min(180, Math.max(1, Number(body?.minutes) || 25));
+        state.focus = {
+          status: "running",
+          minutes,
+          startedAt: now,
+          endsAt: new Date(Date.now() + minutes * 60000).toISOString()
+        };
+        state.updatedAt = now;
+        await env.PETER_MEMORY.put(key, JSON.stringify(state));
+        return json({ ok: true, action, focus: state.focus, state });
+      }
+
+      if (action === "stop_focus") {
+        state.focus = null;
+        state.updatedAt = now;
+        await env.PETER_MEMORY.put(key, JSON.stringify(state));
+        return json({ ok: true, action, state });
+      }
+
+      if (action === "get_state") {
+        return json({ ok: true, action, state });
+      }
+
+      return json({
+        ok: false,
+        error: "Unknown action",
+        supportedActions: ["add_task", "complete_task", "add_note", "start_focus", "stop_focus", "get_state"]
+      }, 400);
+    }
+
     if (url.pathname === "/api/plan") {
       if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
       if (!env.AI) return json({ ok: false, error: "Workers AI binding is not available" }, 503);
