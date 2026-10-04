@@ -1767,7 +1767,7 @@ function peterProcessCommand(command){
   }
 
   /* Sleep. */
-  if(s==="sleep" || /\bsleep\b/.test(s) && /\b(?:go|time|please|now|band|so)\b/.test(s)){
+  if(s==="sleep" || /\bsleep\b/.test(s) && /\b(?:go|time|please|now|band|so|sleeping)\b/.test(s)){
     peterAwake=false;
     sleepRequested=true;
     peterListening=false;
