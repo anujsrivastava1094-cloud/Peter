@@ -1381,6 +1381,22 @@ function peterGenericNavigation(command){
   if(/\b(?:home|dashboard|main screen|main page|ghar)\b/.test(s)){
     goHome(); peterSpeak("Going home."); return true;
   }
+  if(/^(?:add|create|make)\s+(?:a\s+)?task\b/.test(s)){
+    const title=s.replace(/^(?:add|create|make)\s+(?:a\s+)?task\s*/,"").trim();
+    if(title){
+      peterCreateTask(title).then(function(ok){ peterSpeak(ok?"Task added.":"I couldn't save that task."); });
+    }else peterSpeak("Tell me the task.");
+    return true;
+  }
+
+  if(/^(?:complete|finish|done with|mark)\s+(?:task\s+)?/.test(s)){
+    const title=s.replace(/^(?:complete|finish|done with|mark)\s+(?:task\s+)?/,"").trim();
+    if(title){
+      peterCompleteTask(title).then(function(ok){ peterSpeak(ok?"Task completed.":"I couldn't find that task."); });
+    }else peterSpeak("Tell me which task to complete.");
+    return true;
+  }
+
   if(/\b(?:tasks?|today tasks?|todays tasks?|my tasks?|show tasks?|task list)\b/.test(s)){
     showView("tasks"); peterSpeak("Opening today's tasks."); return true;
   }
