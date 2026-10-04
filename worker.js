@@ -1,18 +1,26 @@
 const AI_MODEL = "@cf/google/gemma-4-26b-a4b-it";
 
+function headers() {
+  return {
+    "content-type": "application/json; charset=UTF-8",
+    "cache-control": "no-store",
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-headers": "Content-Type"
+  };
+}
+
 function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=UTF-8",
-      "cache-control": "no-store"
-    }
-  });
+  return new Response(JSON.stringify(data), { status, headers: headers() });
 }
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: headers() });
+    }
 
     if (url.pathname === "/api/health") {
       return json({
@@ -59,10 +67,7 @@ export default {
               role: "user",
               content: message
             }
-          ],
-          chat_template_kwargs: {
-            enable_thinking: false
-          }
+          ]
         });
 
         const response = typeof result?.response === "string"
