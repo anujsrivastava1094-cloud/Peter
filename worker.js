@@ -55,6 +55,15 @@ export default {
             typeof item.content === "string"
           )
         : [];
+      const sessionId = typeof body?.sessionId === "string" && body.sessionId.trim()
+        ? body.sessionId.trim().slice(0, 120)
+        : "default";
+      let savedMemory = "";
+      if (env.PETER_MEMORY) {
+        try {
+          savedMemory = (await env.PETER_MEMORY.get("conversation:" + sessionId)) || "";
+        } catch {}
+      }
       if (!message) {
         return json({ ok: false, error: "Message is required" }, 400);
       }
@@ -68,7 +77,8 @@ export default {
           messages: [
             {
               role: "system",
-              content: "You are PETER, a personal AI assistant and personal operating system. Understand English, Hindi, and Hinglish, including imperfect word order. Reply in English unless the user explicitly asks otherwise. Be practical, concise, natural, and honest. Never claim an action happened unless the application actually performed it."
+              content: "You are PETER, a personal AI assistant and personal operating system. Understand English, Hindi, and Hinglish, including imperfect word order. Reply in English unless the user explicitly asks otherwise. Be practical, concise, natural, and honest. Never claim an action happened unless the application actually performed it." +
+                (savedMemory ? "\nRelevant recent PETER memory:\n" + savedMemory.slice(0, 5000) : "")
             },
             ...history.map(item => ({
               role: item.role,
@@ -92,10 +102,35 @@ export default {
               ? result.result.trim()
               : "";
 
+        if (env.PETER_MEMORY) {
+          try {
+            const nextMemory = [
+              savedMemory,
+              "User: " + message,
+              "PETER: " + response
+            ].filter(Boolean).join("\n").slice(-12000);
+            await env.PETER_MEMORY.put("conversation:" + sessionId, nextMemory, {
+              expirationTtl: 60 * 60 * 24 * 30
+            });
+          } catch {}
+        }
+
+        if (env.PETER_DB) {
+          try {
+            await env.PETER_DB.prepare(
+              "INSERT INTO events (event_type, payload) VALUES (?, ?)"
+            ).bind(
+              "conversation",
+              JSON.stringify({ sessionId, message, response: response.slice(0, 5000) })
+            ).run();
+          } catch {}
+        }
+
         return json({
           ok: true,
           response,
-          model: AI_MODEL
+          model: AI_MODEL,
+          brain: true
         });
       } catch (error) {
         return json({
