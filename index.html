@@ -2137,6 +2137,8 @@ function peterProcessCommand(command){
     if(stripped) s=stripped;
   }
 
+  /* Deterministic persistent actions get first priority.
+     Automation is checked next; UI navigation follows after that. */
   if(peterRemoteActionCommand(s)) return;
   if(peterAutomationCommand(s)) return;
   if(!s) return;
