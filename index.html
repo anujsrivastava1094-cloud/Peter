@@ -1842,7 +1842,7 @@ const PETER_BRAIN_HISTORY_KEY="peter_brain_history";
 function peterBrainSession(){
   let id=localStorage.getItem(PETER_BRAIN_SESSION_KEY);
   if(!id){
-    id="peter-"+Date.now()+"-"+Math.random().toString(36).slice(2,10);
+    id="peter-"+(crypto.randomUUID ? crypto.randomUUID() : Date.now()+"-"+String(crypto.getRandomValues(new Uint32Array(2))[0]));
     localStorage.setItem(PETER_BRAIN_SESSION_KEY,id);
   }
   return id;
