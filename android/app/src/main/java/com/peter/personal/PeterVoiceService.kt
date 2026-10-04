@@ -134,7 +134,7 @@ class PeterVoiceService : Service() {
         return texts.maxByOrNull(::score).orEmpty()
     }
 
-    private fun normalize(raw: String) {
+    private fun normalize(raw: String): String {
         return raw.lowercase(Locale.ROOT)
             .replace("पीटर", "peter")
             .replace("पीटार", "peter")
