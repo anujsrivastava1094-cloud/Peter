@@ -21,6 +21,20 @@ function checkAssets(html){
   const refs=[...html.matchAll(/(?:src|href)=["']([^"'#?]+)["']/gi)].map(m=>m[1]).filter(x=>x.startsWith("./")||x.startsWith("../"));
   [...new Set(refs)].forEach(ref=>exists(path.normalize(ref))?pass("asset exists: "+ref):fail("missing asset: "+ref));
 }
+function checkDuplicateFunctions(html){
+  const names=[...html.matchAll(/function\\s+([A-Za-z_$][\\w$]*)\\s*\\(/g)].map(m=>m[1]);
+  const counts=new Map();
+  names.forEach(n=>counts.set(n,(counts.get(n)||0)+1));
+  const dup=[...counts.entries()].filter(([,n])=>n>1).map(([n,n])=>n);
+  dup.length?fail("duplicate function declarations: "+dup.join(", ")):pass("no duplicate function declarations");
+}
+function checkDangerousInlineErrors(html){
+  const patterns=[
+    {re:/console\\.error\\s*\\(\\s*["']PETER[^"']*error/i,msg:"known PETER error logging remains"},
+    {re:/TODO\\s*:\s*(?:FIX|BUG)/i,msg:"unresolved BUG/TODO marker"}
+  ];
+  patterns.forEach(p=>{if(p.re.test(html)) fail(p.msg);});
+}
 function checkFunctions(html){
   ["peterProcessCommand","peterAutomationCommand","peterActionRouter","peterGenericNavigation","peterAskCloudflareAI","peterSpeak","sendTextCommand","openDetail","renderAll"].forEach(n=>{
     new RegExp("function\\s+"+n+"\\s*\\(").test(html)?pass("function "+n):fail("missing function "+n);
@@ -45,7 +59,7 @@ function checkWorkflows(){
 try{
   const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
   checkFile("index.html");checkFile("worker.js");checkFile("wrangler.jsonc");
-  checkDuplicateIds(html);checkScripts(html);checkAssets(html);checkFunctions(html);checkWorker();checkWorkflows();
+  checkDuplicateIds(html);checkScripts(html);checkAssets(html);checkDuplicateFunctions(html);checkDangerousInlineErrors(html);checkFunctions(html);checkWorker();checkWorkflows();
 }catch(e){fail("guardian crashed: "+e.stack);}
 if(failures.length){console.error("\nPETER GUARDIAN FAILED");failures.forEach(x=>console.error("FAIL:",x));process.exit(1);}
 console.log("\nPETER GUARDIAN GREEN");
