@@ -48,6 +48,13 @@ export default {
       }
 
       const message = typeof body?.message === "string" ? body.message.trim() : "";
+      const history = Array.isArray(body?.history)
+        ? body.history.slice(-8).filter(item =>
+            item &&
+            (item.role === "user" || item.role === "assistant") &&
+            typeof item.content === "string"
+          )
+        : [];
       if (!message) {
         return json({ ok: false, error: "Message is required" }, 400);
       }
@@ -61,13 +68,20 @@ export default {
           messages: [
             {
               role: "system",
-              content: "You are PETER, a concise personal AI assistant. Be helpful, clear, practical, and natural. The user may speak Hindi, Hinglish, or English; understand all three and reply in English unless the user explicitly asks for another language. Do not claim to have performed actions you cannot perform."
+              content: "You are PETER, a personal AI assistant and personal operating system. Understand English, Hindi, and Hinglish, including imperfect word order. Reply in English unless the user explicitly asks otherwise. Be practical, concise, natural, and honest. Never claim an action happened unless the application actually performed it."
             },
+            ...history.map(item => ({
+              role: item.role,
+              content: item.content.slice(0, 2500)
+            })),
             {
               role: "user",
               content: message
             }
-          ]
+          ],
+          chat_template_kwargs: {
+            enable_thinking: false
+          }
         });
 
         const response = typeof result?.choices?.[0]?.message?.content === "string"
