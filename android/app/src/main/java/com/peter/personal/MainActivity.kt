@@ -255,7 +255,7 @@ class MainActivity : AppCompatActivity() {
             .putBoolean(PENDING_WAKE_ONLY, false)
             .apply()
 
-        if (command.isNullOrBlank()) showPeterListening() else runPeterCommand(command)
+        if (command.isNullOrBlank()) speakPeterWakeOnly() else runPeterCommand(command)
     }
 
     companion object {
