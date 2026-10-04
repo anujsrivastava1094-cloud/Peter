@@ -171,7 +171,7 @@ export default {
       /* Web-intelligence detection. No external search is performed here,
          keeping the current PETER deployment ₹0-first. */
       const webPatterns = [
-        /\b(?:latest|current|today|today's|todays|now|recent|recently|this week|this month|news|live|real[- ]time|updated|update)\\b/i,
+        /\b(?:latest|current|today|today's|todays|now|recent|recently|this week|this month|news|live|real[- ]time|updated|update)\b/i,
         /\b(?:weather|temperature|stock price|exchange rate|score|standings|schedule)\\b/i,
         /\b(?:who is|what happened|what are the latest|what is the current|how much is)\\b/i
       ];
@@ -198,6 +198,12 @@ export default {
         intent = "navigate"; action = "show_timeline";
       } else if (/^(?:go )?(?:home|dashboard)$/.test(s)) {
         intent = "navigate"; action = "home";
+      }
+
+      if (intent === "chat" && likelyWeb) {
+        intent = "web";
+        action = "web_search_needed";
+        payload = { query: raw };
       }
 
       return json({
