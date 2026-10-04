@@ -1866,20 +1866,19 @@ if(typeof SpeechRecognition !== "undefined" && !window.peterNativeMode){
     speechText.textContent='Microphone ready. Say "Peter"...';
     updatePeterMic();
 
-    if(!window.peterNativeMode && navigator.mediaDevices?.getUserMedia){
-      try{
-        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-        stream.getTracks().forEach(function(t){t.stop();});
-      }catch(e){
-        peterListening=false;
-        updatePeterMic();
-        speechText.textContent=e.name==="NotAllowedError"
-          ?"Microphone permission was denied. Chrome site settings → Microphone → Allow."
-          :"Could not access the microphone. Check Chrome microphone permission.";
-        return;
-      }
+    /* Start recognition directly from the user's tap.
+       Do not open a separate getUserMedia probe first: on Android Chrome
+       that extra async permission flow can cause SpeechRecognition itself
+       to return a misleading "not-allowed" error. SpeechRecognition will
+       request/use the microphone directly. */
+    try{
+      recognitionStarting=true;
+      recognition.start();
+    }catch(e){
+      recognitionStarting=false;
+      console.error("PETER recognition start error:",e);
+      peterRestartListening(250);
     }
-    peterRestartListening(50);
   };
 
   recognition.onstart=function(){
@@ -1957,7 +1956,7 @@ if(typeof SpeechRecognition !== "undefined" && !window.peterNativeMode){
       peterAwake=false;
       sleepRequested=true;
       updatePeterMic();
-      speechText.textContent="Microphone permission is required. Allow it in Chrome and tap PETER again.";
+      speechText.textContent="Chrome is blocking PETER voice recognition. Reset this site's microphone permission, then tap PETER again.";
       return;
     }
 
