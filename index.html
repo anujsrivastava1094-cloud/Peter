@@ -2492,6 +2492,8 @@ if(typeof SpeechRecognition !== "undefined" && !window.peterNativeMode){
         stream.getTracks().forEach(function(track){track.stop();});
       }
       recognition.lang="en-IN";
+      peterPrimeSpeech();
+      try{speechSynthesis.resume();}catch(e){}
       recognitionStarting=true;
       recognition.start();
     }catch(e){
@@ -2605,6 +2607,30 @@ let peterLastCommandAt=0;
 let peterSpeechId=0;
 let peterPendingTaskTitle=false;
 
+/* PETER v12 TTS latency: prime the browser voice engine once and reuse the
+   selected voice. This avoids repeated voice enumeration/initialization on Android. */
+let peterPreferredSpeechVoice=null;
+function peterPrimeSpeech(){
+  try{
+    if(!("speechSynthesis" in window)) return;
+    const voices=speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
+    const preferred=[
+      "Google UK English Male","Google US English Male","Microsoft David",
+      "Microsoft George","Daniel","Rishi"
+    ];
+    peterPreferredSpeechVoice=voices.find(function(v){
+      return preferred.some(function(name){return v.name.toLowerCase().includes(name.toLowerCase());});
+    }) || voices.find(function(v){
+      return /male|david|george|daniel|rishi/i.test(v.name) && /^en/i.test(v.lang);
+    }) || voices.find(function(v){return /^en-IN/i.test(v.lang);}) ||
+      voices.find(function(v){return /^en/i.test(v.lang);}) || null;
+  }catch(e){}
+}
+if("speechSynthesis" in window){
+  peterPrimeSpeech();
+  window.addEventListener("voiceschanged",peterPrimeSpeech);
+}
+
 function peterSpeak(text){
   peterUpdateVoiceModeFromState();
   const spoken=String(text||"");
@@ -2622,9 +2648,7 @@ function peterSpeak(text){
   const thisSpeechId=++peterSpeechId;
   peterVoiceBusy=true;
   speechSynthesis.cancel();
-  try{if(window.PeterNative) PeterNative.setSpeechBusy(true);}catch(e){}
-  peterUpdateVoiceModeFromState();
-  updatePeterMic();
+  try{speechSynthesis.resume();}catch(e){}
   try{if(window.PeterNative) PeterNative.setSpeechBusy(true);}catch(e){}
   peterUpdateVoiceModeFromState();
   updatePeterMic();
@@ -2635,20 +2659,8 @@ function peterSpeak(text){
   speech.pitch=0.72;
   speech.volume=1;
 
-  const voices=speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
-  const preferred=[
-    "Google UK English Male","Google US English Male","Microsoft David",
-    "Microsoft George","Daniel","Rishi"
-  ];
-  let voice=voices.find(function(v){
-    return preferred.some(function(name){return v.name.toLowerCase().includes(name.toLowerCase());});
-  });
-  if(!voice) voice=voices.find(function(v){
-    return /male|david|george|daniel|rishi/i.test(v.name) && /^en/i.test(v.lang);
-  });
-  if(!voice) voice=voices.find(function(v){return /^en-IN/i.test(v.lang);}) ||
-              voices.find(function(v){return /^en/i.test(v.lang);});
-  if(voice) speech.voice=voice;
+  if(!peterPreferredSpeechVoice) peterPrimeSpeech();
+  if(peterPreferredSpeechVoice) speech.voice=peterPreferredSpeechVoice;
 
   speech.onend=function(){
     if(thisSpeechId!==peterSpeechId)return;
