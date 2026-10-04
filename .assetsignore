@@ -1,0 +1,7 @@
+worker.js
+wrangler.jsonc
+.wrangler/
+.git/
+.github/
+node_modules/
+*.log
