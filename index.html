@@ -1278,6 +1278,42 @@ function peterOpenBestBlock(s){
   return false;
 }
 
+function peterConditionalActionRouter(command){
+  const s=peterNormalizeCommand(command);
+  const match=s.match(/^if\s+(.+?)\s+(?:then\s+)?(.+)$/);
+  if(!match) return false;
+
+  const condition=match[1].trim();
+  const action=match[2].trim();
+
+  let conditionResult=null;
+  if(/\b(?:i am|i'm|i am currently)?\s*(?:free|available)\b/.test(condition)){
+    const schedule=typeof getActiveSchedule==="function" ? getActiveSchedule() : null;
+    const now=new Date();
+    const mins=now.getHours()*60+now.getMinutes();
+    const current=schedule&&schedule.timeline ? schedule.timeline.find(function(x){
+      return mins>=timeToMinutes(x.start)&&mins<timeToMinutes(x.end);
+    }) : null;
+    conditionResult=!current;
+  }else if(/\b(?:no|don't have any)\s+(?:task|tasks)\b/.test(condition)){
+    const tasks=typeof data!=="undefined"&&data.tasks?data.tasks:[];
+    conditionResult=tasks.length===0;
+  }else if(/\b(?:focus|focus mode)\s+is\s+(?:not|off|inactive)\b/.test(condition)){
+    conditionResult=!focusTimer;
+  }else{
+    return false;
+  }
+
+  if(conditionResult){
+    peterProcessCommand(action);
+    if(peterBatchMode) return true;
+    setTimeout(function(){peterSpeak("Condition met. Action completed.");},250);
+  }else{
+    peterSpeak("The condition is not met, so I did not run that action.");
+  }
+  return true;
+}
+
 function peterMultiActionRouter(command){
   const s=peterNormalizeCommand(command);
   if(!/\b(?:and|then|after that|phir|fir|aur|uske baad)\b/.test(s)) return false;
@@ -2025,6 +2061,9 @@ function peterProcessCommand(command){
   if(peterRemoteActionCommand(s)) return;
   if(peterAutomationCommand(s)) return;
   if(!s) return;
+
+  /* Phase 4: conditional decision → action workflows. */
+  if(peterConditionalActionRouter(s)) return;
 
   /* Phase 4: execute multiple recognized actions from one natural command. */
   if(peterMultiActionRouter(s)) return;
