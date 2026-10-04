@@ -1278,6 +1278,35 @@ function peterOpenBestBlock(s){
   return false;
 }
 
+function peterActionRouter(command){
+  const s=peterNormalizeCommand(command);
+
+  /* Natural navigation aliases -> real PETER UI actions. */
+  const routes=[
+    {re:/^(?:open|show|take me to)\\s+(?:school|school study|school study plan)$/,action:function(){openDetail("school");peterSpeak("Opening School.");}},
+    {re:/^(?:open|show|take me to)\\s+(?:jee|jee study|jee study plan)$/,action:function(){openDetail("jee");peterSpeak("Opening JEE study plan.");}},
+    {re:/^(?:open|show|take me to)\\s+(?:calisthenics|training|workout)$/,action:function(){openDetail("calisthenics");peterSpeak("Opening Calisthenics.");}},
+    {re:/^(?:open|show|take me to)\\s+(?:editing|edit)$/,action:function(){openDetail("editing");peterSpeak("Opening Editing.");}},
+    {re:/^(?:open|show|take me to)\\s+(?:advanced editing|cgi|vfx|cgi vfx)$/,action:function(){openDetail("advanced");peterSpeak("Opening Advanced Editing.");}},
+    {re:/^(?:open|show|take me to)\\s+(?:spidy senses|spidey senses|spidy sense|spidey sense)$/,action:function(){openDetail("spidy");peterSpeak("Opening Spidy Senses.");}},
+    {re:/^(?:open|show|take me to)\\s+(?:eyesight|improve eyesight)$/,action:function(){openDetail("eyesight");peterSpeak("Opening Eyesight.");}},
+    {re:/^(?:show|open)\\s+(?:progress|my progress|progress report)$/,action:function(){showView("progress");peterSpeak("Opening progress.");}},
+    {re:/^(?:show|open)\\s+(?:today(?:'s)? plan|daily plan|my plan)$/,action:function(){showView("timeline");peterSpeak("Opening today's plan.");}}
+  ];
+
+  for(let i=0;i<routes.length;i++){
+    if(routes[i].re.test(s)){try{routes[i].action();}catch(e){console.error("PETER action error:",e);}return true;}
+  }
+
+  /* Natural action verbs for the existing module matcher. */
+  if(/^(?:open|show|take me to|go to|go into)\\s+/.test(s)){
+    const target=s.replace(/^(?:open|show|take me to|go to|go into)\\s+/,"").trim();
+    if(target && peterOpenBestBlock(target)) return true;
+  }
+
+  return false;
+}
+
 function peterGenericNavigation(command){
   const s=peterNormalizeCommand(command);
 
@@ -1875,6 +1904,8 @@ function peterProcessCommand(command){
   peterResponseLanguage="en";
 
   if(peterCheckFreeAtTime(s)) return;
+
+  if(peterActionRouter(s)) return;
 
   /* System status. */
   if(/\b(?:peter\s+)?(?:status|system status|system check|health check)\b/.test(s)){
