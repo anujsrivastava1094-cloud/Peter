@@ -22,7 +22,7 @@ function checkAssets(html){
   [...new Set(refs)].forEach(ref=>exists(path.normalize(ref))?pass("asset exists: "+ref):fail("missing asset: "+ref));
 }
 function checkDuplicateFunctions(html){
-  const names=[...html.matchAll(/function\\s+([A-Za-z_$][\\w$]*)\\s*\\(/g)].map(m=>m[1]);
+  const names=[...html.matchAll(/function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(m=>m[1]);
   const counts=new Map();
   names.forEach(n=>counts.set(n,(counts.get(n)||0)+1));
   const dup=[...counts.entries()].filter(([,n])=>n>1).map(([n,n])=>n);
