@@ -1028,7 +1028,7 @@ function peterNormalizeCommand(text){
     [/\bpaach\b/g, " five "],
     [/\bchar\b/g, " four "],
     [/\bteen\b/g, " three "],
-    [/\bdo\b/g, " two "],
+    /* Do NOT globally translate "do" → "two"; it is a normal Hindi verb. */
     [/\bek\b/g, " one "],
     [/\bchhe\b/g, " six "],
     [/\bcheh\b/g, " six "],
@@ -1450,26 +1450,15 @@ function peterSetVoiceOverlayState(label){
   l.textContent=label;
   o.classList.toggle("listening",label.includes("LISTEN"));
 }
-async function openPeterVoiceMode(){
+function openPeterVoiceMode(){
   peterVoiceMode=true;
   peterBuildVoiceBars();
   const o=document.getElementById("peterVoiceOverlay");
   if(o){o.classList.add("show");o.setAttribute("aria-hidden","false");}
-  peterSetVoiceOverlayState("PETER LISTENING");
-  try{
-    if(!window.peterNativeMode && !peterAudioStream && navigator.mediaDevices?.getUserMedia){
-      peterAudioStream=await navigator.mediaDevices.getUserMedia({audio:true});
-      peterAudioContext=new (window.AudioContext||window.webkitAudioContext)();
-      const source=peterAudioContext.createMediaStreamSource(peterAudioStream);
-      peterAudioAnalyser=peterAudioContext.createAnalyser();
-      peterAudioAnalyser.fftSize=128;
-      peterAudioAnalyser.smoothingTimeConstant=.72;
-      source.connect(peterAudioAnalyser);
-    }
-    peterAnimateVoiceMode();
-  }catch(e){
-    console.log("PETER visualizer audio error",e);
-  }
+  peterSetVoiceOverlayState(peterVoiceBusy ? "PETER SPEAKING" : "PETER LISTENING");
+  /* Speech recognition already owns the microphone; visual mode must not open a second stream. */
+  peterAudioAnalyser=null;
+  peterAnimateVoiceMode();
 }
 function peterAnimateVoiceMode(){
   if(!peterVoiceMode)return;
@@ -1480,7 +1469,10 @@ function peterAnimateVoiceMode(){
     peterAudioAnalyser.getByteFrequencyData(data);
     let sum=0;for(let i=0;i<data.length;i++)sum+=data[i];
     level=Math.min(1,(sum/data.length)/110);
-  }else level=peterVoiceBusy?.55:.12;
+  }else{
+    const target=peterVoiceBusy ? .62 : (peterAwake ? .28 : .10);
+    level += (target-level)*.18;
+  }
   bars.forEach(function(el,i){
     const wave=.5+.5*Math.sin(i*.65+performance.now()/150);
     el.style.height=(10+level*62*wave)+"%";
@@ -1589,8 +1581,8 @@ function peterParseReminderDateTime(s){
 function peterParseDurationMinutes(s){
   let m=s.match(/\b(\d+(?:\.\d+)?)\s*(?:minute|minutes|min|mins|m)\b/);
   if(m) return Math.round(Number(m[1]));
-  const word={one:1,two:2,three:3,four:4,five:5,ten:10,fifteen:15,twenty:20,thirty:30,forty:40,sixty:60};
-  m=s.match(/\b(one|two|three|four|five|ten|fifteen|twenty|thirty|forty|sixty)\s*(?:minute|minutes|min|mins)\b/);
+  const word={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,fifteen:15,twenty:20,thirty:30,forty:40,sixty:60,ek:1,do:2,teen:3,char:4,paanch:5,paach:5,chhe:6,cheh:6,saat:7,aath:8,nau:9,das:10};
+  m=s.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|sixty|ek|do|teen|char|paanch|paach|chhe|cheh|saat|aath|nau|das)\s*(?:minute|minutes|min|mins)\b/);
   return m ? word[m[1]] : null;
 }
 function peterParseSaveReminder(s){
@@ -1823,7 +1815,7 @@ document.getElementById("peterCommandInput")?.addEventListener("keydown",functio
   if(event.key==="Enter"){event.preventDefault();sendTextCommand();}
 });
 
-if(SpeechRecognition){
+if(typeof SpeechRecognition !== "undefined" && !window.peterNativeMode){
   recognition=new SpeechRecognition();
 
   /* PETER v9 voice engine:
@@ -1940,7 +1932,10 @@ if(SpeechRecognition){
     }
 
     speechText.textContent="You said: "+heard;
-    peterProcessCommand(heard);
+    try{peterProcessCommand(heard);}catch(error){
+      console.error("PETER command error:",error);
+      peterSpeak("I hit an internal error. Please try that command again.");
+    }
   };
 
   recognition.onend=function(){
@@ -2039,7 +2034,7 @@ window.addEventListener("load",function(){
 
   /* Auto-start the ears. If Android requires a first permission gesture,
      the microphone button remains the fallback. */
-  if(SpeechRecognition && window.isSecureContext){
+  if(typeof SpeechRecognition !== "undefined" && !window.peterNativeMode && window.isSecureContext){
     setTimeout(function(){
       try{
         peterListening=true;
