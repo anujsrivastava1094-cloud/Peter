@@ -1994,7 +1994,7 @@ async function renderRemoteActionNotes(state){
     }).join("");
 }
 
-function peterSyncRemoteActions(){
+async function peterSyncRemoteActions(){
   const data=await peterRemoteAction("get_state");
   return !!data;
 }
@@ -2073,36 +2073,9 @@ function peterRemoteActionCommand(command){
     return true;
   }
 
-  /* Backend router handles navigation and future intents that do not match
-     the local deterministic aliases above. */
-  fetch("/api/command", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({command:s})
-  }).then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
-    if(!data || !data.ok) return;
-    if(data.intent === "navigate"){
-      if(data.action === "show_tasks"){
-        peterSyncRemoteActions().then(function(){ showView("tasks"); });
-      }else if(data.action === "show_notes"){
-        if(typeof renderRemoteActionNotes === "function") peterSyncRemoteActions().then(function(){ showView("notes"); });
-        else showView("notes");
-      }else if(data.action === "show_timeline"){
-        showView("timeline");
-      }else if(data.action === "home"){
-        showView("home");
-      }
-      return;
-    }
-    if(data.intent === "action" && data.action){
-      peterRemoteAction(data.action, data.payload || {}).then(function(result){
-        if(!result) return;
-        if(data.action === "add_task") showView("tasks");
-        if(data.action === "add_note") showView("notes");
-      });
-    }
-  }).catch(function(){});
-  return true;
+  /* Unknown commands must continue to PETER Brain instead of being swallowed
+     by the backend classifier. Recognized remote actions above already return. */
+  return false;
 }
 
 function peterProcessCommand(command){
@@ -2464,6 +2437,7 @@ function peterSpeak(text){
 
 window.addEventListener("load",function(){
   peterRestoreReminders();
+  setTimeout(function(){ try{ peterSyncRemoteActions(); }catch(e){} }, 900);
   peterListening=false;
   peterAwake=false;
   sleepRequested=false;
