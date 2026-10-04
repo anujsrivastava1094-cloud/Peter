@@ -52,7 +52,12 @@ class PeterVoiceService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification())
         }
-        registerReceiver(speechStateReceiver, IntentFilter(ACTION_SPEECH_STATE), RECEIVER_NOT_EXPORTED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(speechStateReceiver, IntentFilter(ACTION_SPEECH_STATE), RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(speechStateReceiver, IntentFilter(ACTION_SPEECH_STATE))
+        }
         startListening()
     }
 
