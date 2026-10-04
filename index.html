@@ -1751,6 +1751,28 @@ function peterRememberConversation(role,content){
   localStorage.setItem(PETER_BRAIN_HISTORY_KEY,JSON.stringify(h.slice(-8)));
 }
 
+async function peterAskPlan(requestText){
+  const text=String(requestText||"").trim();
+  if(!text) return false;
+  try{
+    const response=await fetch("https://peter.anujsrivastava1094.workers.dev/api/plan",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({request:text.slice(0,6000)})
+    });
+    const data=await response.json().catch(function(){return {};});
+    if(!response.ok || !data.ok || !data.plan) return false;
+    const plan=String(data.plan).trim();
+    peterRememberConversation("user","PLAN REQUEST: "+text);
+    peterRememberConversation("assistant",plan);
+    peterSpeak(plan);
+    return true;
+  }catch(error){
+    console.error("PETER Plan Maker error:",error);
+    return false;
+  }
+}
+
 async function peterAskCloudflareAI(message){
   const endpoint="https://peter.anujsrivastava1094.workers.dev/api/ai";
   const userMessage=String(message||"").trim();
@@ -1825,6 +1847,15 @@ function peterProcessCommand(command){
 
   if(peterAutomationCommand(s)) return;
   if(!s) return;
+
+  /* Plan Maker: natural requests such as "make a plan for my JEE revision". */
+  if(/^(?:make|create|build|design|prepare|give)\\s+(?:me\\s+)?(?:a\\s+)?plan\\b/i.test(s) ||
+     /\\b(?:plan this|help me plan|make a roadmap|create a roadmap)\\b/i.test(s)){
+    peterAskPlan(s).then(function(ok){
+      if(!ok) peterSpeak("I couldn't build the plan right now. Please try again.");
+    });
+    return;
+  }
 
   if(/^remember(?: that)?\\s+/i.test(s)){
     const memoryText=s.replace(/^remember(?: that)?\\s+/i,"").trim();
