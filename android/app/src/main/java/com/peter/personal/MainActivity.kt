@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.webkit.JavascriptInterface
 import android.os.Bundle
 import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
@@ -55,12 +56,26 @@ class MainActivity : AppCompatActivity() {
         webView.settings.allowFileAccess = false
         webView.settings.allowContentAccess = true
 
+        /* Native voice feedback state bridge. The WebView only loads PETER's
+           controlled GitHub Pages origin, and external links are opened outside
+           the WebView. */
+        webView.addJavascriptInterface(PeterWebBridge(this), "PeterNative")
+
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(
                 view: WebView?,
                 request: WebResourceRequest?
             ): Boolean {
-                return request?.url?.host != "anujsrivastava1094-cloud.github.io"
+                val uri = request?.url ?: return false
+                return if (uri.host == "anujsrivastava1094-cloud.github.io") {
+                    false
+                } else {
+                    try {
+                        startActivity(Intent(Intent.ACTION_VIEW, uri))
+                    } catch (_: Exception) {
+                    }
+                    true
+                }
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
@@ -88,6 +103,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var receiverRegistered = false
+
+    private class PeterWebBridge(private val context: Context) {
+        @JavascriptInterface
+        fun setSpeechBusy(busy: Boolean) {
+            context.sendBroadcast(
+                Intent(PeterVoiceService.ACTION_SPEECH_STATE).apply {
+                    setPackage(context.packageName)
+                    putExtra(PeterVoiceService.EXTRA_SPEECH_BUSY, busy)
+                }
+            )
+        }
+    }
 
     private fun registerVoiceReceiver() {
         if (receiverRegistered) return
