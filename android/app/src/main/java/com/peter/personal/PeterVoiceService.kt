@@ -14,6 +14,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
+import android.app.KeyguardManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -204,16 +206,23 @@ class PeterVoiceService : Service() {
         // Bring PETER up only when the wake word is first heard.
         // After wake, commands are delivered to the already-running activity
         // without repeatedly opening the screen.
-        if (wakeOnly) {
+        if (wakeOnly && shouldShowSpidy()) {
             try {
                 val launch = Intent(this, MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    putExtra(MainActivity.EXTRA_SHOW_SPIDY, true)
                 }
                 startActivity(launch)
             } catch (_: Exception) {
                 // Pending state remains available for the next app launch.
             }
         }
+    }
+
+    private fun shouldShowSpidy(): Boolean {
+        val power = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val keyguard = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        return !power.isInteractive || keyguard.isKeyguardLocked
     }
 
     private fun scheduleRestart(delay: Long) {
