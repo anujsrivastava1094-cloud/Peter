@@ -2073,7 +2073,36 @@ function peterRemoteActionCommand(command){
     return true;
   }
 
-  return false;
+  /* Backend router handles navigation and future intents that do not match
+     the local deterministic aliases above. */
+  fetch("/api/command", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({command:s})
+  }).then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
+    if(!data || !data.ok) return;
+    if(data.intent === "navigate"){
+      if(data.action === "show_tasks"){
+        peterSyncRemoteActions().then(function(){ showView("tasks"); });
+      }else if(data.action === "show_notes"){
+        if(typeof renderRemoteActionNotes === "function") peterSyncRemoteActions().then(function(){ showView("notes"); });
+        else showView("notes");
+      }else if(data.action === "show_timeline"){
+        showView("timeline");
+      }else if(data.action === "home"){
+        showView("home");
+      }
+      return;
+    }
+    if(data.intent === "action" && data.action){
+      peterRemoteAction(data.action, data.payload || {}).then(function(result){
+        if(!result) return;
+        if(data.action === "add_task") showView("tasks");
+        if(data.action === "add_note") showView("notes");
+      });
+    }
+  }).catch(function(){});
+  return true;
 }
 
 function peterProcessCommand(command){
