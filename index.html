@@ -1423,7 +1423,7 @@ if(window.peterNativeMode){
         peterListening=true;
         peterAwake=true;
         sleepRequested=false;
-        speechText.textContent="PETER native voice service is active. Say "Peter" followed by your command.";
+        speechText.textContent='PETER native voice service is active. Say "Peter" followed by your command.';
         updatePeterMic();
         try{ await openPeterVoiceMode(); }catch(e){}
       };
