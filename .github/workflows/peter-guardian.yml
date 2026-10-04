@@ -34,6 +34,25 @@ jobs:
           set -e
           curl -fsS --max-time 20 https://peter.anujsrivastava1094.workers.dev/api/health | tee /tmp/peter-health.json
           grep -q '"ok":true' /tmp/peter-health.json
+      - name: Close resolved guardian issue
+        if: success()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const title = "PETER Guardian detected a failure";
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: "open"
+            });
+            for (const issue of issues.filter(i => i.title === title)) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: "closed"
+              });
+            }
+
       - name: Open diagnostic issue on failure
         if: failure()
         uses: actions/github-script@v8
