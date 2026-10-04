@@ -27,7 +27,10 @@ export default {
         ok: true,
         service: "PETER",
         worker: "online",
-        aiBinding: Boolean(env.AI)
+        aiBinding: Boolean(env.AI),
+        memoryBinding: Boolean(env.PETER_MEMORY),
+        databaseBinding: Boolean(env.PETER_DB),
+        queueBinding: Boolean(env.PETER_EVENTS)
       });
     }
 
@@ -155,7 +158,7 @@ export default {
             {
               role: "system",
               content: "You are PETER, a personal AI assistant and personal operating system. Understand English, Hindi, and Hinglish, including imperfect word order. Reply in English unless the user explicitly asks otherwise. Be practical, concise, natural, and honest. Never claim an action happened unless the application actually performed it." +
-                (savedMemory ? "\nRelevant recent PETER memory:\n" + savedMemory.slice(0, 5000) : "")
+                (profileMemory ? "\nRelevant saved personal memory:\n" + profileMemory.slice(0, 5000) : "") +\n                (savedMemory ? "\nRecent conversation context:\n" + savedMemory.slice(0, 5000) : "")
             },
             ...history.map(item => ({
               role: item.role,
