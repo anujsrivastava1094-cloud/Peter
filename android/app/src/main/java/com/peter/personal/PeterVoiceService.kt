@@ -22,6 +22,8 @@ class PeterVoiceService : Service() {
     private var recognizer: SpeechRecognizer? = null
     private var restarting = false
     private var lastWakeAt = 0L
+    private var awake = false
+    private var sleepingForSpeech = false
 
     override fun onCreate() {
         super.onCreate()
@@ -36,8 +38,10 @@ class PeterVoiceService : Service() {
     }
 
     private fun startListening() {
+        if (sleepingForSpeech) return
         if (!SpeechRecognizer.isRecognitionAvailable(this)) return
         handler.post {
+            if (sleepingForSpeech) return@post
             try {
                 recognizer?.destroy()
                 recognizer = SpeechRecognizer.createSpeechRecognizer(this)
@@ -65,66 +69,111 @@ class PeterVoiceService : Service() {
         override fun onEvent(eventType: Int, params: Bundle?) = Unit
 
         override fun onEndOfSpeech() {
-            scheduleRestart(250)
+            scheduleRestart(220)
         }
 
         override fun onError(error: Int) {
-            scheduleRestart(if (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) 1200 else 600)
+            scheduleRestart(if (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) 900 else 500)
         }
 
         override fun onResults(results: Bundle?) {
             val texts = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
             val transcript = texts.firstOrNull().orEmpty()
             if (transcript.isNotBlank()) handleTranscript(transcript)
-            scheduleRestart(300)
+            scheduleRestart(280)
         }
     }
 
-    private fun handleTranscript(raw: String) {
-        val normalized = raw.lowercase(Locale.ROOT)
+    private fun normalize(raw: String): String {
+        return raw.lowercase(Locale.ROOT)
             .replace("पीटर", "peter")
             .replace("पीटार", "peter")
+            .replace("पीटर्", "peter")
             .replace("peta", "peter")
+            .replace("peeter", "peter")
+            .replace(Regex("[,!?;:.]"), " ")
+            .replace(Regex("\\s+"), " ")
             .trim()
+    }
 
-        if (!Regex("(^|\\s)peter(\\s|$)").containsMatchIn(normalized)) return
-
-        val now = System.currentTimeMillis()
-        if (now - lastWakeAt < 1800) return
-        lastWakeAt = now
-
-        val command = normalized
-            .replaceFirst(Regex("^.*?\\bpeter\\b\\s*"), "")
+    private fun stripWakeWord(text: String): String {
+        return text.replaceFirst(Regex("^.*?\\bpeter\\b\\s*"), "")
+            .replace(Regex("\\s+"), " ")
             .trim()
+    }
 
+    private fun isWakeWord(text: String): Boolean =
+        Regex("(^|\\s)peter(\\s|$)").containsMatchIn(text)
+
+    private fun isSleepCommand(text: String): Boolean {
+        return Regex("\\b(?:sleep|sleeping time|go to sleep|stop listening|good night|goodnight)\\b").containsMatchIn(text) ||
+            Regex("\\b(?:band|so jao|sojao)\\b").containsMatchIn(text)
+    }
+
+    private fun handleTranscript(raw: String) {
+        val normalized = normalize(raw)
+        if (normalized.isBlank()) return
+
+        if (!awake) {
+            if (!isWakeWord(normalized)) return
+
+            val now = System.currentTimeMillis()
+            if (now - lastWakeAt < 1600) return
+            lastWakeAt = now
+
+            awake = true
+            val command = stripWakeWord(normalized)
+            publish(command, wakeOnly = command.isBlank())
+            return
+        }
+
+        // Once awake, PETER no longer requires the wake word for every command.
+        if (isSleepCommand(normalized) ||
+            (isWakeWord(normalized) && isSleepCommand(stripWakeWord(normalized)))) {
+            awake = false
+            publish("sleep", wakeOnly = false)
+            return
+        }
+
+        val command = if (isWakeWord(normalized)) stripWakeWord(normalized) else normalized
+        if (command.isBlank()) return
+        publish(command, wakeOnly = false)
+    }
+
+    private fun publish(command: String, wakeOnly: Boolean) {
         val prefs = getSharedPreferences(MainActivity.PREFS, Context.MODE_PRIVATE)
         prefs.edit()
             .putString(MainActivity.PENDING_COMMAND, command)
-            .putBoolean(MainActivity.PENDING_WAKE_ONLY, command.isBlank())
+            .putBoolean(MainActivity.PENDING_WAKE_ONLY, wakeOnly)
             .apply()
 
         sendBroadcast(Intent(MainActivity.ACTION_PETER_COMMAND).apply {
             setPackage(packageName)
             putExtra(MainActivity.EXTRA_COMMAND, command)
+            putExtra(MainActivity.EXTRA_WAKE_ONLY, wakeOnly)
         })
 
-        try {
-            val launch = Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        // Bring PETER up only when the wake word is first heard.
+        // After wake, commands are delivered to the already-running activity
+        // without repeatedly opening the screen.
+        if (wakeOnly) {
+            try {
+                val launch = Intent(this, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                }
+                startActivity(launch)
+            } catch (_: Exception) {
+                // Pending state remains available for the next app launch.
             }
-            startActivity(launch)
-        } catch (_: Exception) {
-            // Android may block background activity launches on some versions.
-            // The pending command remains stored for the next visible app launch.
         }
     }
 
     private fun scheduleRestart(delay: Long) {
-        if (restarting) return
+        if (restarting || sleepingForSpeech) return
         restarting = true
         handler.postDelayed({
             restarting = false
-            startListening()
+            if (!sleepingForSpeech) startListening()
         }, delay)
     }
 
@@ -152,7 +201,7 @@ class PeterVoiceService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setContentTitle("PETER voice mode is active")
-            .setContentText("Microphone access is active. Tap to open PETER.")
+            .setContentText("Say “Peter” to wake PETER. Say “sleeping time” to stop.")
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setContentIntent(pending)
