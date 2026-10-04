@@ -1328,7 +1328,7 @@ function peterConditionalActionRouter(command){
 
 async function peterBackendAction(action,payload){
   try{
-    const response=await fetch("https://peter.anujsrivastava1094.workers.dev/api/actions",{
+    const response=await fetch("/api/actions",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(Object.assign({action:action,sessionId:peterBrainSession()},payload||{}))
@@ -1884,7 +1884,7 @@ async function peterAskPlan(requestText){
   const text=String(requestText||"").trim();
   if(!text) return false;
   try{
-    const response=await fetch("https://peter.anujsrivastava1094.workers.dev/api/plan",{
+    const response=await fetch("/api/plan",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({request:text.slice(0,6000)})
@@ -1903,7 +1903,7 @@ async function peterAskPlan(requestText){
 }
 
 async function peterAskCloudflareAI(message){
-  const endpoint="https://peter.anujsrivastava1094.workers.dev/api/ai";
+  const endpoint="/api/ai";
   const userMessage=String(message||"").trim();
   if(!userMessage) return false;
   try{
@@ -1946,7 +1946,7 @@ async function peterSaveMemory(text){
 
 async function peterCloudCommand(command){
   try{
-    const response=await fetch("https://peter.anujsrivastava1094.workers.dev/api/command",{
+    const response=await fetch("/api/command",{
       method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({command:String(command||"").slice(0,500),sessionId:peterBrainSession()})
     });
@@ -1961,18 +1961,19 @@ async function peterCloudCommand(command){
     }
 
     if(data.intent==="action"){
-      const endpoint="https://peter.anujsrivastava1094.workers.dev/api/actions";
-      const body=Object.assign({action:data.action,sessionId:peterBrainSession()},data.payload||{});
-      const ar=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-      const result=await ar.json().catch(function(){return {};});
-      if(!ar.ok || !result.ok) return false;
-      if(data.action==="add_task"){peterSpeak("Task added.");return true;}
-      if(data.action==="complete_task"){peterSpeak("Task completed.");return true;}
-      if(data.action==="add_note"){peterSpeak("Note saved.");return true;}
+      const result=await peterRemoteAction(data.action,data.payload||{});
+      if(!result) return false;
+      if(data.action==="add_task"){showView("tasks");peterSpeak("Task added.");return true;}
+      if(data.action==="complete_task"){showView("tasks");peterSpeak("Task completed.");return true;}
+      if(data.action==="add_note"){showView("notes");peterSpeak("Note saved.");return true;}
       if(data.action==="start_focus"){
-        startFocus(Number(body.minutes)||25);peterSpeak("Focus mode started.");return true;
+        startFocus(Number((data.payload||{}).minutes)||25);peterSpeak("Focus mode started.");return true;
       }
       if(data.action==="stop_focus"){clearInterval(focusTimer);peterSpeak("Focus mode stopped.");return true;}
+    }
+    if(data.intent==="web"){
+      peterSpeak("Web intelligence is not connected to this PETER build yet, so I won't pretend I checked live information.");
+      return true;
     }
     return false;
   }catch(e){
@@ -1983,7 +1984,7 @@ async function peterCloudCommand(command){
 
 async function peterLoadMemory(){
   try{
-    const response=await fetch("https://peter.anujsrivastava1094.workers.dev/api/memory?key="+encodeURIComponent("profile:"+peterBrainSession()));
+    const response=await fetch("/api/memory?key="+encodeURIComponent("profile:"+peterBrainSession()));
     const data=await response.json().catch(function(){return {};});
     return data.ok ? String(data.value||"") : "";
   }catch(e){return "";}
@@ -1995,7 +1996,7 @@ async function peterRemoteAction(action,payload){
       sessionId:peterBrainSession(),
       action:action
     },payload||{});
-    const response=await fetch("https://peter.anujsrivastava1094.workers.dev/api/actions",{
+    const response=await fetch("/api/actions",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(body)
