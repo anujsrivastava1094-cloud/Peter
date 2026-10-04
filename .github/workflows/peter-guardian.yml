@@ -2,8 +2,20 @@ name: PETER Guardian
 on:
   push:
     branches: [main]
+    paths:
+      - "index.html"
+      - "worker.js"
+      - "wrangler.jsonc"
+      - "scripts/**"
+      - ".github/workflows/**"
   pull_request:
     branches: [main]
+    paths:
+      - "index.html"
+      - "worker.js"
+      - "wrangler.jsonc"
+      - "scripts/**"
+      - ".github/workflows/**"
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch:
