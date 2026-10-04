@@ -1,0 +1,60 @@
+name: PETER Guardian
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  guardian:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Static integrity checks
+        run: node scripts/peter-guardian.mjs
+      - name: GitHub Pages smoke test
+        run: |
+          set -e
+          code=$(curl -L -s -o /tmp/peter.html -w "%{http_code}" --max-time 20 https://anujsrivastava1094-cloud.github.io/Peter/)
+          test "$code" = "200"
+          grep -q "PETER" /tmp/peter.html
+      - name: Cloudflare Worker health test
+        run: |
+          set -e
+          curl -fsS --max-time 20 https://peter.anujsrivastava1094.workers.dev/api/health | tee /tmp/peter-health.json
+          grep -q '"ok":true' /tmp/peter-health.json
+      - name: Open diagnostic issue on failure
+        if: failure()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const title = "PETER Guardian detected a failure";
+            const body = [
+              "The automated PETER Guardian found a problem.",
+              "",
+              "Commit: " + context.sha,
+              "Run: " + context.serverUrl + "/" + context.repo.owner + "/" + context.repo.repo + "/actions/runs/" + context.runId,
+              "",
+              "Fix the reported failure before treating PETER as healthy."
+            ].join("\n");
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: "open"
+            });
+            if (!issues.some(i => i.title === title)) {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body
+              });
+            }
