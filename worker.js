@@ -56,6 +56,58 @@ export default {
       return json({ ok: false, error: "Method not allowed" }, 405);
     }
 
+    if (url.pathname === "/api/plan") {
+      if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
+      if (!env.AI) return json({ ok: false, error: "Workers AI binding is not available" }, 503);
+
+      let body;
+      try { body = await request.json(); }
+      catch { return json({ ok: false, error: "Invalid JSON body" }, 400); }
+
+      const requestText = typeof body?.request === "string" ? body.request.trim().slice(0, 6000) : "";
+      if (!requestText) return json({ ok: false, error: "Plan request is required" }, 400);
+
+      try {
+        const result = await env.AI.run(AI_MODEL, {
+          messages: [
+            {
+              role: "system",
+              content: "You are PETER Plan Maker. Build realistic, actionable plans from natural-language goals. Understand English, Hindi and Hinglish. Reply in English. Identify the goal, constraints, available time, deadline, resources and priority when provided. If important information is missing, make reasonable assumptions and label them. Challenge impossible workloads instead of blindly agreeing. Return a compact plan with: Goal, Assumptions, Strategy, Milestones, Weekly Structure, Daily Actions, Time Budget, Risks, Recovery Rule, and First Action. Never claim that a task was scheduled or completed."
+            },
+            { role: "user", content: requestText }
+          ],
+          chat_template_kwargs: { enable_thinking: false }
+        });
+
+        const response = typeof result?.choices?.[0]?.message?.content === "string"
+          ? result.choices[0].message.content.trim()
+          : typeof result?.response === "string"
+            ? result.response.trim()
+            : "";
+
+        if (!response) return json({ ok: false, error: "Planner returned no response" }, 502);
+
+        if (env.PETER_DB) {
+          try {
+            await env.PETER_DB.prepare(
+              "INSERT INTO events (event_type, payload) VALUES (?, ?)"
+            ).bind(
+              "plan_request",
+              JSON.stringify({ request: requestText, response: response.slice(0, 8000) })
+            ).run();
+          } catch {}
+        }
+
+        return json({ ok: true, plan: response, model: AI_MODEL });
+      } catch (error) {
+        return json({
+          ok: false,
+          error: "Planner inference failed",
+          detail: error instanceof Error ? error.message : String(error)
+        }, 502);
+      }
+    }
+
     if (url.pathname === "/api/ai") {
       if (request.method !== "POST") {
         return json({ ok: false, error: "Method not allowed" }, 405);
