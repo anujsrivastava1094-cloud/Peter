@@ -951,6 +951,23 @@ function openSchool() {
 /* PETER API: GitHub Pages frontend must call the Cloudflare Worker explicitly. */
 const PETER_API_BASE = "https://peter.anujsrivastava1094.workers.dev";
 function peterApi(path){ return PETER_API_BASE + path; }
+
+/* PETER cache recovery: clear an old PWA shell once so the phone loads the current build. */
+(function peterRecoverStaleShell(){
+  const KEY="peter_cache_recovery_v1";
+  if(localStorage.getItem(KEY)==="done") return;
+  if(!("serviceWorker" in navigator)) return;
+  window.addEventListener("load",async function(){
+    try{
+      localStorage.setItem(KEY,"done");
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+      const keys=await caches.keys();
+      await Promise.all(keys.filter(k=>k.startsWith("peter-")).map(k=>caches.delete(k)));
+      window.location.reload();
+    }catch(e){ console.warn("PETER cache recovery skipped:",e); }
+  },{once:true});
+})();
 </script>
 <script>
 /* =========================
@@ -1921,7 +1938,7 @@ async function peterAskPlan(requestText){
 }
 
 async function peterAskCloudflareAI(message){
-  const endpoint="/api/ai";
+  const endpoint=peterApi("/api/ai");
   const userMessage=String(message||"").trim();
   if(!userMessage) return false;
   try{
