@@ -9,6 +9,8 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
+import android.app.KeyguardManager
 import android.webkit.JavascriptInterface
 import android.os.Bundle
 import android.webkit.PermissionRequest
@@ -36,7 +38,7 @@ class MainActivity : AppCompatActivity() {
             val command = intent.getStringExtra(EXTRA_COMMAND).orEmpty()
             val wakeOnly = intent.getBooleanExtra(EXTRA_WAKE_ONLY, false)
             if (wakeOnly) {
-                showPeterWake()
+                speakPeterWakeOnly()
             } else if (command.isNotBlank()) {
                 runPeterCommand(command)
             }
@@ -46,6 +48,12 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val showSpidy = intent.getBooleanExtra(EXTRA_SHOW_SPIDY, false)
+        if (showSpidy && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        }
 
         webView = WebView(this)
         setContentView(webView)
@@ -81,6 +89,10 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 disableWebSpeechRecognition()
+                if (intent.getBooleanExtra(EXTRA_SHOW_SPIDY, false)) {
+                    showPeterWake()
+                    intent.removeExtra(EXTRA_SHOW_SPIDY)
+                }
                 consumePendingCommand()
             }
         }
@@ -182,6 +194,18 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    private fun speakPeterWakeOnly() {
+        webView.evaluateJavascript(
+            """(function(){ try {
+                if (typeof peterAwake !== 'undefined') peterAwake = true;
+                if (typeof peterListening !== 'undefined') peterListening = true;
+                if (typeof sleepRequested !== 'undefined') sleepRequested = false;
+                if (typeof peterSpeak === 'function') peterSpeak("Yes, Boss.");
+            } catch(e) {} })();""".trimIndent(),
+            null
+        )
+    }
+
     private fun showPeterWake() {
         webView.evaluateJavascript(
             """
@@ -207,7 +231,6 @@ class MainActivity : AppCompatActivity() {
                 try {
                     if (typeof peterAwake !== 'undefined') peterAwake = true;
                     if (typeof peterListening !== 'undefined') peterListening = true;
-                    if (typeof openPeterVoiceMode === 'function') openPeterVoiceMode();
                     if (typeof peterProcessCommand === 'function') {
                         peterProcessCommand($safe);
                     }
@@ -239,6 +262,7 @@ class MainActivity : AppCompatActivity() {
         const val ACTION_PETER_COMMAND = "com.peter.personal.PETER_COMMAND"
         const val EXTRA_COMMAND = "command"
         const val EXTRA_WAKE_ONLY = "wake_only"
+        const val EXTRA_SHOW_SPIDY = "show_spidy"
         const val PREFS = "peter_native_voice"
         const val PENDING_COMMAND = "pending_command"
         const val PENDING_WAKE_ONLY = "pending_wake_only"
