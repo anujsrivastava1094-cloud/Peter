@@ -1826,7 +1826,9 @@ function peterProcessCommand(command){
   /* Wake-independent universal commands. */
   if(peterGenericNavigation(s)) return;
 
-  peterAskCloudflareAI(s).then(function(ok){\n    if(!ok) peterSpeak("I can handle that if it matches one of my PETER systems. Try saying open school, open calisthenics, show timeline, show tasks, take a note, start focus, or go home.");\n  });
+  peterAskCloudflareAI(s).then(function(ok){
+    if(!ok) peterSpeak("I can handle that if it matches one of my PETER systems. Try saying open school, open calisthenics, show timeline, show tasks, take a note, start focus, or go home.");
+  });
 }
 
 /* Make the old core point to the same router for typed commands too. */
