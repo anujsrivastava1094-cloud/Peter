@@ -1278,6 +1278,34 @@ function peterOpenBestBlock(s){
   return false;
 }
 
+function peterMultiActionRouter(command){
+  const s=peterNormalizeCommand(command);
+  if(!/\b(?:and|then|after that|phir|fir|aur|uske baad)\b/.test(s)) return false;
+
+  const parts=s.split(/\s+(?:and|then|after that|phir|fir|aur|uske baad)\s+/).map(x=>x.trim()).filter(Boolean);
+  if(parts.length<2 || parts.length>4) return false;
+
+  const results=[];
+  peterBatchMode=true;
+  try{
+    parts.forEach(function(part){
+      let handled=false;
+      if(peterAutomationCommand(part)) handled=true;
+      else if(peterActionRouter(part)) handled=true;
+      else if(peterGenericNavigation(part)) handled=true;
+      if(handled) results.push(part);
+    });
+  }finally{
+    peterBatchMode=false;
+  }
+
+  if(results.length>=2){
+    peterSpeak("Done. I completed "+results.length+" actions.");
+    return true;
+  }
+  return false;
+}
+
 function peterActionRouter(command){
   const s=peterNormalizeCommand(command);
 
@@ -1877,6 +1905,9 @@ function peterProcessCommand(command){
   if(peterAutomationCommand(s)) return;
   if(!s) return;
 
+  /* Phase 4: execute multiple recognized actions from one natural command. */
+  if(peterMultiActionRouter(s)) return;
+
   /* Plan Maker: natural requests such as "make a plan for my JEE revision". */
   if(/^(?:make|create|build|design|prepare|give)\\s+(?:me\\s+)?(?:a\\s+)?plan\\b/i.test(s) ||
      /\\b(?:plan this|help me plan|make a roadmap|create a roadmap)\\b/i.test(s)){
@@ -2147,6 +2178,7 @@ function peterSpeak(text){
   peterUpdateVoiceModeFromState();
   const spoken=String(text||"");
   speechText.textContent=spoken;
+  if(peterBatchMode) return;
 
   if(!("speechSynthesis" in window)){
     if(peterListening && !sleepRequested) peterRestartListening(50);
