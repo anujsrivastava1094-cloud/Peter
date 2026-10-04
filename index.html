@@ -1341,15 +1341,15 @@ function peterActionRouter(command){
 
   /* Natural navigation aliases -> real PETER UI actions. */
   const routes=[
-    {re:/^(?:open|show|take me to)\\s+(?:school|school study|school study plan)$/,action:function(){openDetail("school");peterSpeak("Opening School.");}},
-    {re:/^(?:open|show|take me to)\\s+(?:jee|jee study|jee study plan)$/,action:function(){openDetail("jee");peterSpeak("Opening JEE study plan.");}},
-    {re:/^(?:open|show|take me to)\\s+(?:calisthenics|training|workout)$/,action:function(){openDetail("calisthenics");peterSpeak("Opening Calisthenics.");}},
-    {re:/^(?:open|show|take me to)\\s+(?:editing|edit)$/,action:function(){openDetail("editing");peterSpeak("Opening Editing.");}},
-    {re:/^(?:open|show|take me to)\\s+(?:advanced editing|cgi|vfx|cgi vfx)$/,action:function(){openDetail("vfx");peterSpeak("Opening Advanced Editing.");}},
-    {re:/^(?:open|show|take me to)\\s+(?:spidy senses|spidey senses|spidy sense|spidey sense)$/,action:function(){openDetail("spidy");peterSpeak("Opening Spidy Senses.");}},
-    {re:/^(?:open|show|take me to)\\s+(?:eyesight|improve eyesight)$/,action:function(){openDetail("eyes");peterSpeak("Opening Eyesight.");}},
-    {re:/^(?:show|open)\\s+(?:progress|my progress|progress report)$/,action:function(){showView("progress");peterSpeak("Opening progress.");}},
-    {re:/^(?:show|open)\\s+(?:today(?:'s)? plan|daily plan|my plan)$/,action:function(){showView("timeline");peterSpeak("Opening today's plan.");}}
+    {re:/^(?:open|show|take me to)\s+(?:school|school study|school study plan)$/,action:function(){openDetail("school");peterSpeak("Opening School.");}},
+    {re:/^(?:open|show|take me to)\s+(?:jee|jee study|jee study plan)$/,action:function(){openDetail("jee");peterSpeak("Opening JEE study plan.");}},
+    {re:/^(?:open|show|take me to)\s+(?:calisthenics|training|workout)$/,action:function(){openDetail("calisthenics");peterSpeak("Opening Calisthenics.");}},
+    {re:/^(?:open|show|take me to)\s+(?:editing|edit)$/,action:function(){openDetail("editing");peterSpeak("Opening Editing.");}},
+    {re:/^(?:open|show|take me to)\s+(?:advanced editing|cgi|vfx|cgi vfx)$/,action:function(){openDetail("vfx");peterSpeak("Opening Advanced Editing.");}},
+    {re:/^(?:open|show|take me to)\s+(?:spidy senses|spidey senses|spidy sense|spidey sense)$/,action:function(){openDetail("spidy");peterSpeak("Opening Spidy Senses.");}},
+    {re:/^(?:open|show|take me to)\s+(?:eyesight|improve eyesight)$/,action:function(){openDetail("eyes");peterSpeak("Opening Eyesight.");}},
+    {re:/^(?:show|open)\s+(?:progress|my progress|progress report)$/,action:function(){showView("progress");peterSpeak("Opening progress.");}},
+    {re:/^(?:show|open)\s+(?:today(?:'s)? plan|daily plan|my plan)$/,action:function(){showView("timeline");peterSpeak("Opening today's plan.");}}
   ];
 
   for(let i=0;i<routes.length;i++){
@@ -1357,8 +1357,8 @@ function peterActionRouter(command){
   }
 
   /* Natural action verbs for the existing module matcher. */
-  if(/^(?:open|show|take me to|go to|go into)\\s+/.test(s)){
-    const target=s.replace(/^(?:open|show|take me to|go to|go into)\\s+/,"").trim();
+  if(/^(?:open|show|take me to|go to|go into)\s+/.test(s)){
+    const target=s.replace(/^(?:open|show|take me to|go to|go into)\s+/,"").trim();
     if(target && peterOpenBestBlock(target)) return true;
   }
 
@@ -2143,16 +2143,16 @@ function peterProcessCommand(command){
   if(peterMultiActionRouter(s)) return;
 
   /* Plan Maker: natural requests such as "make a plan for my JEE revision". */
-  if(/^(?:make|create|build|design|prepare|give)\\s+(?:me\\s+)?(?:a\\s+)?plan\\b/i.test(s) ||
-     /\\b(?:plan this|help me plan|make a roadmap|create a roadmap)\\b/i.test(s)){
+  if(/^(?:make|create|build|design|prepare|give)\s+(?:me\s+)?(?:a\s+)?plan\b/i.test(s) ||
+     /\b(?:plan this|help me plan|make a roadmap|create a roadmap)\b/i.test(s)){
     peterAskPlan(s).then(function(ok){
       if(!ok) peterSpeak("I couldn't build the plan right now. Please try again.");
     });
     return;
   }
 
-  if(/^remember(?: that)?\\s+/i.test(s)){
-    const memoryText=s.replace(/^remember(?: that)?\\s+/i,"").trim();
+  if(/^remember(?: that)?\s+/i.test(s)){
+    const memoryText=s.replace(/^remember(?: that)?\s+/i,"").trim();
     peterSaveMemory(memoryText).then(function(ok){
       peterSpeak(ok ? "Got it. I will remember that." : "I couldn't save that memory right now.");
     });
