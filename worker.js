@@ -31,6 +31,31 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/memory") {
+      if (!env.PETER_MEMORY) return json({ ok: false, error: "Memory binding is not available" }, 503);
+
+      if (request.method === "GET") {
+        const key = url.searchParams.get("key") || "profile:default";
+        const value = await env.PETER_MEMORY.get(key);
+        return json({ ok: true, key, value: value || "" });
+      }
+
+      if (request.method === "POST") {
+        let body;
+        try { body = await request.json(); }
+        catch { return json({ ok: false, error: "Invalid JSON body" }, 400); }
+
+        const key = typeof body?.key === "string" ? body.key.trim().slice(0, 200) : "";
+        const value = typeof body?.value === "string" ? body.value.trim().slice(0, 10000) : "";
+        if (!key || !value) return json({ ok: false, error: "Key and value are required" }, 400);
+
+        await env.PETER_MEMORY.put(key, value);
+        return json({ ok: true, key });
+      }
+
+      return json({ ok: false, error: "Method not allowed" }, 405);
+    }
+
     if (url.pathname === "/api/ai") {
       if (request.method !== "POST") {
         return json({ ok: false, error: "Method not allowed" }, 405);
