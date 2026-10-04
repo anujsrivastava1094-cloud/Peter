@@ -171,14 +171,11 @@ export default {
       /* Web-intelligence detection. No external search is performed here,
          keeping the current PETER deployment ₹0-first. */
       const webPatterns = [
-        /\\b(?:latest|current|today|today's|todays|now|recent|recently|this week|this month|news|live|real[- ]time|updated|update)\\b/i,
-        /\\b(?:weather|temperature|stock price|exchange rate|score|standings|schedule)\\b/i,
-        /\\b(?:who is|what happened|what are the latest|what is the current|how much is)\\b/i
+        /\b(?:latest|current|today|today's|todays|now|recent|recently|this week|this month|news|live|real[- ]time|updated|update)\\b/i,
+        /\b(?:weather|temperature|stock price|exchange rate|score|standings|schedule)\\b/i,
+        /\b(?:who is|what happened|what are the latest|what is the current|how much is)\\b/i
       ];
       const likelyWeb = webPatterns.some(function(re){ return re.test(raw); });
-
-      let action = null;
-      let payload = {};
 
       let m = s.match(/^(?:add|create|make) (?:a )?(?:task|todo|to do)(?: called| named| for| to)? (.+)$/);
       if (m) {
