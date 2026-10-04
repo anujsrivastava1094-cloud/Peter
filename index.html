@@ -1726,20 +1726,55 @@ function peterAutomationCommand(s){
   return false;
 }
 
+const PETER_BRAIN_SESSION_KEY="peter_brain_session";
+const PETER_BRAIN_HISTORY_KEY="peter_brain_history";
+
+function peterBrainSession(){
+  let id=localStorage.getItem(PETER_BRAIN_SESSION_KEY);
+  if(!id){
+    id="peter-"+Date.now()+"-"+Math.random().toString(36).slice(2,10);
+    localStorage.setItem(PETER_BRAIN_SESSION_KEY,id);
+  }
+  return id;
+}
+
+function peterBrainHistory(){
+  try{
+    const h=JSON.parse(localStorage.getItem(PETER_BRAIN_HISTORY_KEY)||"[]");
+    return Array.isArray(h)?h.slice(-8):[];
+  }catch(e){return [];}
+}
+
+function peterRememberConversation(role,content){
+  const h=peterBrainHistory();
+  h.push({role:role,content:String(content||"").slice(0,2500)});
+  localStorage.setItem(PETER_BRAIN_HISTORY_KEY,JSON.stringify(h.slice(-8)));
+}
+
 async function peterAskCloudflareAI(message){
   const endpoint="https://peter.anujsrivastava1094.workers.dev/api/ai";
+  const userMessage=String(message||"").trim();
+  if(!userMessage) return false;
   try{
+    const history=peterBrainHistory();
+    peterRememberConversation("user",userMessage);
     const response=await fetch(endpoint,{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({message:String(message||"").slice(0,4000)})
+      body:JSON.stringify({
+        message:userMessage.slice(0,4000),
+        sessionId:peterBrainSession(),
+        history:history.slice(-8)
+      })
     });
     const data=await response.json().catch(function(){return {};});
     if(!response.ok || !data.ok || !data.response) return false;
-    peterSpeak(String(data.response));
+    const answer=String(data.response).trim();
+    peterRememberConversation("assistant",answer);
+    peterSpeak(answer);
     return true;
   }catch(error){
-    console.error("PETER Cloudflare AI error:",error);
+    console.error("PETER Brain error:",error);
     return false;
   }
 }
