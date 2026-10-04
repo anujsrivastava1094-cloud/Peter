@@ -80,6 +80,22 @@ export default {
 
       const now = new Date().toISOString();
 
+      async function saveActionState() {
+        state.updatedAt = now;
+        state.lastAction = { action, at: now };
+        state.actionLog = Array.isArray(state.actionLog) ? state.actionLog : [];
+        state.actionLog.unshift({ action, at: now });
+        state.actionLog = state.actionLog.slice(0, 50);
+        await env.PETER_MEMORY.put(key, JSON.stringify(state));
+        if (env.PETER_DB) {
+          try {
+            await env.PETER_DB.prepare(
+              "INSERT INTO events (event_type, payload) VALUES (?, ?)"
+            ).bind("action", JSON.stringify({ sessionId, action, at: now })).run();
+          } catch {}
+        }
+      }
+
       if (action === "add_task") {
         const title = typeof body?.title === "string" ? body.title.trim().slice(0, 300) : "";
         if (!title) return json({ ok: false, error: "Task title is required" }, 400);
@@ -91,8 +107,7 @@ export default {
         };
         state.tasks.unshift(task);
         state.tasks = state.tasks.slice(0, 100);
-        state.updatedAt = now;
-        await env.PETER_MEMORY.put(key, JSON.stringify(state));
+        await saveActionState();
         return json({ ok: true, action, task, state });
       }
 
@@ -106,8 +121,7 @@ export default {
         if (!task) return json({ ok: false, error: "Task not found" }, 404);
         task.status = "completed";
         task.completedAt = now;
-        state.updatedAt = now;
-        await env.PETER_MEMORY.put(key, JSON.stringify(state));
+        await saveActionState();
         return json({ ok: true, action, task, state });
       }
 
@@ -117,8 +131,7 @@ export default {
         const note = { id: crypto.randomUUID(), content, createdAt: now };
         state.notes.unshift(note);
         state.notes = state.notes.slice(0, 100);
-        state.updatedAt = now;
-        await env.PETER_MEMORY.put(key, JSON.stringify(state));
+        await saveActionState();
         return json({ ok: true, action, note, state });
       }
 
@@ -130,15 +143,13 @@ export default {
           startedAt: now,
           endsAt: new Date(Date.now() + minutes * 60000).toISOString()
         };
-        state.updatedAt = now;
-        await env.PETER_MEMORY.put(key, JSON.stringify(state));
+        await saveActionState();
         return json({ ok: true, action, focus: state.focus, state });
       }
 
       if (action === "stop_focus") {
         state.focus = null;
-        state.updatedAt = now;
-        await env.PETER_MEMORY.put(key, JSON.stringify(state));
+        await saveActionState();
         return json({ ok: true, action, state });
       }
 
