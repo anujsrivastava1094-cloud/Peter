@@ -58,6 +58,16 @@ export default {
       const sessionId = typeof body?.sessionId === "string" && body.sessionId.trim()
         ? body.sessionId.trim().slice(0, 120)
         : "default";
+      const history = Array.isArray(body?.history)
+        ? body.history.slice(-8).filter(item =>
+            item &&
+            (item.role === "user" || item.role === "assistant") &&
+            typeof item.content === "string"
+          )
+        : [];
+      const sessionId = typeof body?.sessionId === "string" && body.sessionId.trim()
+        ? body.sessionId.trim().slice(0, 120)
+        : "default";
       let savedMemory = "";
       if (env.PETER_MEMORY) {
         try {
