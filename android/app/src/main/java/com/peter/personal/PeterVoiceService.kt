@@ -7,6 +7,9 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -24,16 +27,37 @@ class PeterVoiceService : Service() {
     private var lastWakeAt = 0L
     private var awake = false
     private var sleepingForSpeech = false
+    private var speechBusy = false
+    private var replyPauseUntil = 0L
+
+    private val speechStateReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != ACTION_SPEECH_STATE) return
+            speechBusy = intent.getBooleanExtra(EXTRA_SPEECH_BUSY, false)
+            if (!speechBusy && !sleepingForSpeech) {
+                scheduleRestart(120)
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
         createChannel()
-        startForeground(NOTIFICATION_ID, notification())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification())
+        }
+        registerReceiver(speechStateReceiver, IntentFilter(ACTION_SPEECH_STATE), RECEIVER_NOT_EXPORTED)
         startListening()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (recognizer == null) startListening()
+        if (recognizer == null && !speechBusy) startListening()
         return START_STICKY
     }
 
@@ -78,13 +102,32 @@ class PeterVoiceService : Service() {
 
         override fun onResults(results: Bundle?) {
             val texts = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
-            val transcript = texts.firstOrNull().orEmpty()
+            val transcript = chooseTranscript(texts)
             if (transcript.isNotBlank()) handleTranscript(transcript)
-            scheduleRestart(280)
+            replyPauseUntil = System.currentTimeMillis() + 1800L
+            scheduleRestart(1800)
         }
     }
 
-    private fun normalize(raw: String): String {
+    private fun chooseTranscript(texts: List<String>): String {
+        if (texts.isEmpty()) return ""
+        val vocab = listOf(
+            "peter","school","physics","chemistry","mathematics","maths","english",
+            "physical education","calisthenics","editing","advanced editing","vfx","cgi",
+            "spidy senses","spidey senses","eyesight","jee","timeline","schedule","tasks",
+            "notes","focus","sleep","stop","time","date","chapter","ncert","module"
+        )
+        fun score(value: String): Int {
+            val x = normalize(value)
+            var score = 0
+            for (word in vocab) if (x.contains(word)) score += if (word.contains(" ")) 8 else 4
+            if (x.contains("peter")) score += 12
+            return score - (x.length / 80)
+        }
+        return texts.maxByOrNull(::score).orEmpty()
+    }
+
+    private fun normalize(raw: String) {
         return raw.lowercase(Locale.ROOT)
             .replace("पीटर", "peter")
             .replace("पीटार", "peter")
@@ -169,12 +212,16 @@ class PeterVoiceService : Service() {
     }
 
     private fun scheduleRestart(delay: Long) {
-        if (restarting || sleepingForSpeech) return
+        if (sleepingForSpeech || speechBusy) return
+        val now = System.currentTimeMillis()
+        val guardedDelay = maxOf(delay, replyPauseUntil - now)
+        if (restarting) return
         restarting = true
         handler.postDelayed({
             restarting = false
-            if (!sleepingForSpeech) startListening()
-        }, delay)
+            if (!sleepingForSpeech && !speechBusy) startListening()
+            else restarting = false
+        }, guardedDelay)
     }
 
     private fun createChannel() {
@@ -209,6 +256,10 @@ class PeterVoiceService : Service() {
     }
 
     override fun onDestroy() {
+        try {
+            unregisterReceiver(speechStateReceiver)
+        } catch (_: Exception) {
+        }
         recognizer?.destroy()
         recognizer = null
         handler.removeCallbacksAndMessages(null)
@@ -218,6 +269,8 @@ class PeterVoiceService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
+        const val ACTION_SPEECH_STATE = "com.peter.personal.PETER_SPEECH_STATE"
+        const val EXTRA_SPEECH_BUSY = "speech_busy"
         private const val CHANNEL_ID = "peter_voice"
         private const val NOTIFICATION_ID = 7301
     }
