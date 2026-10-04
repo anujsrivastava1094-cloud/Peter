@@ -2555,4 +2555,6 @@ function renderRoutines(){const el=document.getElementById("routineList");if(!el
 function runPeterRoutine(id){const routines=peterLoadRoutines(),r=routines[id];if(!r)return false;if(window.peterRoutineRunning){peterSpeak("A routine is already running.");return true}window.peterRoutineRunning=true;peterSpeak("Starting "+r.name+".");let i=0;function next(){if(i>=r.steps.length){window.peterRoutineRunning=false;peterSpeak(r.name+" complete.");return}const command=r.steps[i++];try{peterProcessCommand(command)}catch(e){console.error("Routine step failed",command,e)}setTimeout(next,650)}next();return true}
 function peterRoutineCommand(s){const m=s.match(/^(?:run|start|execute|launch)\s+(?:my\s+)?(?:routine\s+)?(morning|school|focus|shutdown|morning start|school start|deep focus|day shutdown)$/i);if(!m)return false;const key=m[1].toLowerCase();const map={"morning":"morning","morning start":"morning","school":"school","school start":"school","focus":"focus","deep focus":"focus","shutdown":"shutdown","day shutdown":"shutdown"};return runPeterRoutine(map[key])}
 renderRoutines();
-</script></body></html>
+</script>
+<script>window.addEventListener('unhandledrejection',function(event){console.error('PETER unhandled rejection:',event.reason);});window.addEventListener('error',function(event){console.error('PETER runtime error:',event.error||event.message);});</script>
+</body></html>
