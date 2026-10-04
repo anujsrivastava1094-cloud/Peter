@@ -2197,7 +2197,7 @@ function getMinutesRemaining(item){
   const now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
   return Math.max(0,timeToMinutes(item.end)-nowMin);
 }
-async async function peterCreateTask(title){
+async function peterCreateTask(title){
   const clean=String(title||"").trim();
   if(!clean)return false;
 
