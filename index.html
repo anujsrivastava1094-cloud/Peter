@@ -1629,6 +1629,27 @@ async function peterRequestNotifications(){
 function peterFormatDateTime(ms){
   return new Date(ms).toLocaleString("en-IN",{weekday:"short",day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});
 }
+async function peterSyncReminderRemote(item){
+  if(!item || item.done) return null;
+  try{
+    const response=await fetch("/api/actions",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        sessionId:peterBrainSession(),
+        action:"add_reminder",
+        text:item.text,
+        when:item.when,
+        remindAt:item.remindAt,
+        leadMinutes:item.leadMinutes
+      })
+    });
+    if(!response.ok) return null;
+    const data=await response.json();
+    if(data && data.state) localStorage.setItem("peter_action_state",JSON.stringify(data.state));
+    return data;
+  }catch(e){return null;}
+}
 function peterAddReminder(text,whenMs,leadMinutes){
   const list=peterLoadJson(PETER_REMINDERS_KEY);
   const item={
@@ -1642,6 +1663,7 @@ function peterAddReminder(text,whenMs,leadMinutes){
   list.push(item);
   peterSaveJson(PETER_REMINDERS_KEY,list);
   peterScheduleReminder(item);
+  peterSyncReminderRemote(item);
   return item;
 }
 function peterScheduleReminder(item){
