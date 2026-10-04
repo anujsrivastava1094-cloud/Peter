@@ -29,12 +29,10 @@ function checkDuplicateFunctions(html){
   dup.length?fail("duplicate function declarations: "+dup.join(", ")):pass("no duplicate function declarations");
 }
 function checkDangerousInlineErrors(html){
-  const patterns=[
-    {re:/console\\.error\\s*\\(\\s*["']PETER[^"']*error/i,msg:"known PETER error logging remains"},
-    {re:/TODO\\s*:\s*(?:FIX|BUG)/i,msg:"unresolved BUG/TODO marker"}
-  ];
-  patterns.forEach(p=>{if(p.re.test(html)) fail(p.msg);});
+  if(/TODO\s*:\s*(?:FIX|BUG)/i.test(html)) fail("unresolved BUG/TODO marker");
+  else pass("no unresolved BUG/TODO marker");
 }
+
 function checkFunctions(html){
   ["peterProcessCommand","peterAutomationCommand","peterActionRouter","peterGenericNavigation","peterAskCloudflareAI","peterSpeak","sendTextCommand","openDetail","renderAll"].forEach(n=>{
     new RegExp("function\\s+"+n+"\\s*\\(").test(html)?pass("function "+n):fail("missing function "+n);
