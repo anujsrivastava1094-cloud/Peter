@@ -2242,6 +2242,15 @@ function peterMultiActionRouter(command){
 
 function peterProcessCommand(command){
   let s=peterNormalizeCommand(command).trim();
+  const commandNow=Date.now();
+  if(s && s===peterLastCommandText && commandNow-peterLastCommandAt<1400){
+    console.log("PETER duplicate command ignored:",s);
+    return;
+  }
+  if(s){
+    peterLastCommandText=s;
+    peterLastCommandAt=commandNow;
+  }
 
   /* "Peter" by itself is a wake/attention command, not a normal PETER
      system command. This also makes typed commands behave like voice wake. */
@@ -2260,6 +2269,26 @@ function peterProcessCommand(command){
   if(hasWakeWord(s)){
     const stripped=peterStripWakeWord(s);
     if(stripped) s=stripped;
+  }
+
+  /* Conversational task creation: after "create/add a task", accept the next
+     spoken/text phrase as the task title instead of sending it to the slow AI fallback. */
+  if(peterPendingTaskTitle){
+    peterPendingTaskTitle=false;
+    const title=s.replace(/^(?:it is|it's|called|named)\s+/i,"").trim();
+    if(title){
+      peterCreateTask(title).then(function(ok){
+        peterSpeak(ok ? "Task added." : "I couldn't save that task.");
+      });
+    }else{
+      peterSpeak("I still need the task name.");
+    }
+    return;
+  }
+  if(/^(?:add|create|make)\s+(?:a\s+)?task$/i.test(s)){
+    peterPendingTaskTitle=true;
+    peterSpeak("Sure. What task should I create?");
+    return;
   }
 
   /* Deterministic persistent actions get first priority.
@@ -2405,9 +2434,11 @@ if(typeof SpeechRecognition !== "undefined" && !window.peterNativeMode){
      Hindi/Hinglish-first recognition, continuous recovery, many alternatives,
      and live interruption while PETER is speaking. */
   recognition.lang="en-IN";
-  recognition.continuous=true;
+  /* Single-result turns are more reliable on mobile Chrome than keeping
+     one continuous recognition session alive. onend() restarts the ears. */
+  recognition.continuous=false;
   recognition.interimResults=false;
-  recognition.maxAlternatives=10;
+  recognition.maxAlternatives=3;
 
   try{
     if("phrases" in recognition && "SpeechRecognitionPhrase" in window){
@@ -2568,6 +2599,12 @@ if(typeof SpeechRecognition !== "undefined" && !window.peterNativeMode){
   micBtn.textContent="🎙️ Voice unavailable";
   speechText.textContent="Voice recognition is not supported in this browser.";
 }
+/* PETER v11 voice stability: prevent duplicate commands and stale speech callbacks. */
+let peterLastCommandText="";
+let peterLastCommandAt=0;
+let peterSpeechId=0;
+let peterPendingTaskTitle=false;
+
 function peterSpeak(text){
   peterUpdateVoiceModeFromState();
   const spoken=String(text||"");
@@ -2579,10 +2616,15 @@ function peterSpeak(text){
     return;
   }
 
-  /* Keep recognition alive while speaking so "Peter stop" can interrupt. */
-  speechSynthesis.cancel();
-  try{if(window.PeterNative) PeterNative.setSpeechBusy(false);}catch(e){}
+  /* Invalidate every older utterance BEFORE cancelling it. Chrome can fire
+     onend asynchronously after cancel(); the id prevents stale callbacks
+     from restarting recognition or speaking over the newest response. */
+  const thisSpeechId=++peterSpeechId;
   peterVoiceBusy=true;
+  speechSynthesis.cancel();
+  try{if(window.PeterNative) PeterNative.setSpeechBusy(true);}catch(e){}
+  peterUpdateVoiceModeFromState();
+  updatePeterMic();
   try{if(window.PeterNative) PeterNative.setSpeechBusy(true);}catch(e){}
   peterUpdateVoiceModeFromState();
   updatePeterMic();
@@ -2609,18 +2651,20 @@ function peterSpeak(text){
   if(voice) speech.voice=voice;
 
   speech.onend=function(){
+    if(thisSpeechId!==peterSpeechId)return;
     peterVoiceBusy=false;
     try{if(window.PeterNative) PeterNative.setSpeechBusy(false);}catch(e){}
     peterUpdateVoiceModeFromState();
     updatePeterMic();
-    if(peterListening && !sleepRequested) peterRestartListening(50);
+    if(peterListening && !sleepRequested) peterRestartListening(80);
   };
   speech.onerror=function(){
+    if(thisSpeechId!==peterSpeechId)return;
     peterVoiceBusy=false;
     try{if(window.PeterNative) PeterNative.setSpeechBusy(false);}catch(e){}
     peterUpdateVoiceModeFromState();
     updatePeterMic();
-    if(peterListening && !sleepRequested) peterRestartListening(50);
+    if(peterListening && !sleepRequested) peterRestartListening(80);
   };
 
   speechSynthesis.speak(speech);
