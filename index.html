@@ -2170,6 +2170,76 @@ function peterRemoteActionCommand(command){
   return false;
 }
 
+/* PETER command compatibility layer: restore helpers referenced by the unified router. */
+function peterFormatClockMinutes(minutes){
+  const h=Math.floor(minutes/60)%24, m=minutes%60;
+  const ap=h>=12?"PM":"AM", hh=(h%12)||12;
+  return hh+":"+String(m).padStart(2,"0")+" "+ap;
+}
+function formatScheduleTime(value){
+  if(typeof value==="number") return peterFormatClockMinutes(value);
+  const m=String(value||"").match(/^(\d{1,2}):(\d{2})$/);
+  return m ? peterFormatClockMinutes(Number(m[1])*60+Number(m[2])) : String(value||"");
+}
+function findScheduleTarget(command){
+  const s=peterNormalizeCommand(command);
+  const schedule=typeof getActiveSchedule==="function"?getActiveSchedule():null;
+  const list=schedule&&Array.isArray(schedule.timeline)?schedule.timeline:[];
+  let best=null,bestScore=0;
+  list.forEach(function(item){
+    const score=peterCommandScore(s,item.title||"");
+    if(score>bestScore){bestScore=score;best=item;}
+  });
+  return bestScore>=30?best:null;
+}
+function getMinutesRemaining(item){
+  if(!item)return 0;
+  const now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
+  return Math.max(0,timeToMinutes(item.end)-nowMin);
+}
+async function peterCreateTask(title){
+  const clean=String(title||"").trim();
+  if(!clean)return false;
+  const result=await peterRemoteAction("add_task",{title:clean});
+  if(result)return true;
+  data.tasks.push({time:new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}),title:clean,items:["Added by PETER."]});
+  localStorage.setItem("peter_v4",JSON.stringify(data));
+  renderTasks();
+  return true;
+}
+async function peterCompleteTask(title){
+  const clean=String(title||"").trim();
+  if(!clean)return false;
+  const result=await peterRemoteAction("complete_task",{title:clean});
+  if(result && result.task && result.task.status==="completed")return true;
+  const local=(data.tasks||[]).find(function(t){return peterCommandScore(clean,t.title||"")>=70;});
+  if(local){
+    local.completed=true;
+    localStorage.setItem("peter_v4",JSON.stringify(data));
+    renderTasks();
+    return true;
+  }
+  return false;
+}
+function peterMultiActionRouter(command){
+  const s=peterNormalizeCommand(command);
+  const parts=s.split(/\s+(?:and|then|also)\s+/).map(function(x){return x.trim();}).filter(Boolean);
+  if(parts.length<2)return false;
+  const actionable=parts.filter(function(x){
+    return /^(?:open|show|go|take me to|start|begin|stop|set|add|create|make|save|take|complete|finish|run|launch)\b/.test(x);
+  });
+  if(actionable.length<2)return false;
+  let index=0;
+  function next(){
+    if(index>=actionable.length)return;
+    const cmd=actionable[index++];
+    try{peterProcessCommand(cmd);}catch(e){console.error("PETER multi-action step error:",cmd,e);}
+    setTimeout(next,450);
+  }
+  next();
+  return true;
+}
+
 function peterProcessCommand(command){
   let s=peterNormalizeCommand(command).trim();
 
