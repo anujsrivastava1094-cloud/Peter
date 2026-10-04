@@ -72,7 +72,7 @@ window.addEventListener("DOMContentLoaded",function(){
   if(edit) edit.classList.remove("show");
 });
 </script></head><body><div class="app">
-  <button id="micBtn">🎙️ Talk to PETER</button><button class="iconbtn" style="margin:8px 0;width:100%" onclick="openPeterVoiceMode()">SPIDY VOICE MODE</button>
+  <button id="micBtn">🎙️ Talk to PETER</button>
 <p id="speechText">Tap the button and speak.</p>
 <header><div class="brand"><div class="logo">P</div><div><h1>PETER</h1><small>PERSONAL CONTROL SYSTEM</small></div></div><button class="iconbtn" id="editBtn">⚙</button></header>
 <div id="home" class="view show">
@@ -2163,7 +2163,7 @@ function peterProcessCommand(command){
     peterListening=true;
     sleepRequested=false;
     updatePeterMic();
-    try{ openPeterVoiceMode(); }catch(e){}
+    /* Typed "Peter" is only a wake command. Do not launch Spidey Mode from text. */
     peterSpeak("Yes, Boss.");
     return;
   }
@@ -2407,7 +2407,8 @@ if(typeof SpeechRecognition !== "undefined" && !window.peterNativeMode){
       }
       peterAwake=true;
       sleepRequested=false;
-      if(!peterVoiceMode) openPeterVoiceMode();
+      /* Spidey Mode is reserved for the hidden/screen-off wake state. */
+      if(document.visibilityState === "hidden" && !peterVoiceMode) openPeterVoiceMode();
       const command=peterNormalizeCommand(peterStripWakeWord(heard));
       if(command){
         speechText.textContent="You said: "+command;
