@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-const fs=require("fs"), path=require("path");
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
 const root=process.cwd(), failures=[];
 const pass=m=>console.log("PASS:",m), fail=m=>failures.push(m);
 const exists=p=>fs.existsSync(path.join(root,p));
@@ -26,8 +28,13 @@ function checkFunctions(html){
 }
 function checkWorker(){
   if(!exists("worker.js")){fail("missing worker.js");return;}
-  try{new Function(fs.readFileSync(path.join(root,"worker.js"),"utf8"));pass("worker.js syntax");}
-  catch(e){fail("worker.js syntax: "+e.message);}
+  try {
+    execFileSync(process.execPath, ["--check", path.join(root, "worker.js")], { stdio: "pipe" });
+    pass("worker.js syntax");
+  } catch(e) {
+    const detail = e.stderr?.toString() || e.stdout?.toString() || e.message;
+    fail("worker.js syntax: " + detail.trim());
+  }
 }
 function checkWorkflows(){
   const d=path.join(root,".github/workflows");
