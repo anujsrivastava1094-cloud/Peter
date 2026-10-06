@@ -2486,6 +2486,9 @@ function peterProcessCommand(command){
     return;
   }
 
+  /* Brain v16: answer local context questions before network/AI fallback. */
+  if(peterBrainContextCommand(s)) return;
+
   /* Phase 4: conditional decision → action workflows. */
   if(peterConditionalActionRouter(s)) return;
 
