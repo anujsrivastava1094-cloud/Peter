@@ -1956,7 +1956,7 @@ async function peterAskCloudflareAI(message){
     });
     const data=await response.json().catch(function(){return {};});
     if(!response.ok || !data.ok || !data.response) return false;
-    const answer=peterCleanAnswer(data.response);
+    const answer=peterCompactAnswer(data.response,peterWantsDetail(userMessage));
     peterRememberConversation("assistant",answer);
     peterSpeak(answer);
     return true;
@@ -2257,37 +2257,30 @@ function peterMultiActionRouter(command){
 function peterInstantKnowledge(command){
   const s=peterNormalizeCommand(command).trim();
   const answers=[
-    {
-      test:/^(?:what are )?(?:the )?benefits of running\??$/i,
-      answer:["• Improves cardiovascular fitness","• Builds stamina and endurance","• Supports overall health","• Start gradually and allow recovery."]
-    },
-    {
-      test:/^(?:what are )?(?:the )?benefits of exercise\??$/i,
-      answer:["• Improves fitness and strength","• Supports mood and sleep","• Builds stamina and coordination","• Consistency matters more than overdoing it."]
-    },
-    {
-      test:/^(?:who are you|what are you)\??$/i,
-      answer:["• I am PETER, your personal control system.","• I manage tasks, notes, routines, focus sessions and navigation.","• I can use AI for questions I cannot answer locally."]
-    },
-    {
-      test:/^(?:what can you do|what can you do for me)\??$/i,
-      answer:["• Tasks and notes","• Timeline and routines","• Focus sessions","• School and planning","• Voice commands and AI questions"]
-    }
+    {test:/\b(?:what are|tell me|give me|list|explain)\b.*\bbenefits?\b.*\brunning\b|^\brunning\b.*\bbenefits?\b/i,answer:"Running improves cardiovascular fitness, stamina, and endurance. Start gradually and allow recovery."},
+    {test:/\b(?:what are|tell me|give me|list|explain)\b.*\bbenefits?\b.*\bexercise\b|^\bexercise\b.*\bbenefits?\b/i,answer:"Exercise improves fitness and strength. It also supports mood, sleep, stamina, and coordination."},
+    {test:/^(?:who are you|what are you)\??$/i,answer:"I am PETER, your personal control system. I manage tasks, notes, routines, focus sessions, navigation, and AI questions."},
+    {test:/^(?:what can you do|what can you do for me)\??$/i,answer:"I can manage tasks, notes, timelines, routines, focus sessions, school planning, voice commands, and AI questions."}
   ];
-  for(let i=0;i<answers.length;i++){
-    if(answers[i].test.test(s)){
-      peterSpeak(answers[i].answer.join(" "));
-      return true;
-    }
-  }
+  for(let i=0;i<answers.length;i++){if(answers[i].test.test(s)){peterSpeak(answers[i].answer);return true;}}
   return false;
 }
 
+function peterWantsDetail(text){
+  return /\b(detail|detailed|in detail|deeply|deep dive|step by step|steps|explain fully|full explanation|elaborate)\b/i.test(String(text||""));
+}
 function peterCleanAnswer(text){
-  let s=String(text||"").replace(/\*+/g,"");
+  let s=String(text||"").replace(/\*+/g,"").replace(/#{1,6}\s*/g,"");
   s=s.replace(/^\s*(?:answer|response)\s*:\s*/i,"");
-  s=s.replace(/\n{3,}/g,"\n\n").trim();
+  s=s.replace(/^\s*[-•▪◦*]\s*/gm,"");
+  s=s.replace(/\n+/g," ").replace(/\s{2,}/g," ").trim();
   return s;
+}
+function peterCompactAnswer(text,detail){
+  const s=peterCleanAnswer(text);
+  if(detail)return s;
+  const sentences=s.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[s];
+  return sentences.slice(0,4).join(" ").trim();
 }
 
 function peterShowProcessing(message){
@@ -2717,8 +2710,8 @@ function peterSpeak(text){
 
   const speech=new SpeechSynthesisUtterance(spoken);
   speech.lang="en-IN";
-  speech.rate=1.18;
-  speech.pitch=0.72;
+  speech.rate=1.06;
+  speech.pitch=0.88;
   speech.volume=1;
 
   if(!peterPreferredSpeechVoice) peterPrimeSpeech();
