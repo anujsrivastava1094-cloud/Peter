@@ -2384,6 +2384,39 @@ function peterBrainContextCommand(command){
   return false;
 }
 
+function peterBrainPlanMinutes(raw){
+  const s=String(raw||"").toLowerCase();
+  const m=s.match(/(?:for|have|got|in)\s+(\d+)\s*(?:minutes?|mins?|m)\b/);
+  return m?Math.max(15,Math.min(240,Number(m[1]))):null;
+}
+function peterBrainPlanCommand(command){
+  const s=peterNormalizeCommand(command).trim();
+  const minutes=peterBrainPlanMinutes(s);
+  if(!minutes)return false;
+  if(!/(?:plan|schedule|use|spend|what should i do|how should i use).*(?:time|minutes?|hour)|(?:i have|i got)\s+\d+\s*(?:minutes?|mins?|m)\b/i.test(s))return false;
+  const state=peterBrainGetScheduleState();
+  const priority=peterBrainGetPriorityTask();
+  const plan=[];
+  let remaining=minutes;
+  if(state.current && remaining>=20){
+    const block=Math.min(remaining,Math.max(20,Math.min(50,timeToMinutes(state.current.end)-peterBrainMinutesNow())));
+    plan.push(block+" min: "+state.current.title);
+    remaining-=block;
+  }
+  if(remaining>=15 && priority){
+    const block=Math.min(remaining,Math.max(15,Math.min(45,remaining)));
+    plan.push(block+" min: "+priority.title);
+    remaining-=block;
+  }
+  if(remaining>=10)plan.push(remaining+" min: review mistakes, prepare the next target, and reset");
+  if(!plan.length)plan.push(minutes+" min: start your highest-priority available task and stay on one target");
+  const answer="For the next "+minutes+" minutes: "+plan.join(". ") + ".";
+  peterBrainRecordLocal(s,answer);
+  peterSpeak(answer);
+  return true;
+}
+
+
 function peterInstantKnowledge(command){
   const s=peterNormalizeCommand(command).trim();
   const answers=[
