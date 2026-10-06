@@ -2253,6 +2253,35 @@ function peterMultiActionRouter(command){
   return true;
 }
 
+function peterInstantKnowledge(command){
+  const s=peterNormalizeCommand(command).trim();
+  const answers=[
+    {
+      test:/^(?:what are )?(?:the )?benefits of running\??$/i,
+      answer:"Running can improve cardiovascular fitness, stamina, coordination, and overall physical health. Start gradually and give your body enough recovery."
+    },
+    {
+      test:/^(?:what are )?(?:the )?benefits of exercise\??$/i,
+      answer:"Regular exercise can improve fitness, strength, stamina, mood, sleep, and overall health. Consistency and recovery matter more than doing too much at once."
+    },
+    {
+      test:/^(?:who are you|what are you)\??$/i,
+      answer:"I am PETER, your personal control system. I can manage tasks, notes, routines, focus sessions, navigation, and AI-powered questions."
+    },
+    {
+      test:/^(?:what can you do|what can you do for me)\??$/i,
+      answer:"I can manage your tasks, notes, timeline, routines, focus sessions, school sections, plans, and voice commands. I can also use my AI brain for open-ended questions."
+    }
+  ];
+  for(let i=0;i<answers.length;i++){
+    if(answers[i].test.test(s)){
+      peterSpeak(answers[i].answer);
+      return true;
+    }
+  }
+  return false;
+}
+
 function peterProcessCommand(command){
   let s=peterNormalizeCommand(command).trim();
   const commandNow=Date.now();
@@ -2399,6 +2428,9 @@ function peterProcessCommand(command){
 
   /* Wake-independent universal commands. */
   if(peterGenericNavigation(s)) return;
+
+  /* PETER v14: instant local knowledge for common questions. */
+  if(peterInstantKnowledge(s)) return;
 
   Promise.resolve().then(function(){
     return peterCloudCommand(s);
