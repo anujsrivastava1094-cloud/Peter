@@ -2569,9 +2569,11 @@ if(typeof SpeechRecognition !== "undefined" && !window.peterNativeMode){
   recognition.onstart=function(){
     recognitionRunning=true;
     recognitionStarting=false;
-    speechText.textContent=peterVoiceBusy
-      ? "PETER speaking — listening for stop."
-      : (peterAwake ? "PETER is listening." : 'Listening for "Peter"...');
+    /* Keep the last PETER answer visible. Starting the microphone must not
+       erase the answer immediately after PETER finishes speaking. */
+    if(!peterLastAnswerText && !peterAwake){
+      speechText.textContent='Listening for "Peter"...';
+    }
     updatePeterMic();
   };
 
@@ -2664,6 +2666,7 @@ let peterPendingTaskTitle=false;
 /* PETER v12 TTS latency: prime the browser voice engine once and reuse the
    selected voice. This avoids repeated voice enumeration/initialization on Android. */
 let peterPreferredSpeechVoice=null;
+let peterLastAnswerText="";
 function peterPrimeSpeech(){
   try{
     if(!("speechSynthesis" in window)) return;
@@ -2690,6 +2693,7 @@ function peterSpeak(text){
   text=peterCleanAnswer(text);
   const spoken=String(text||"");
   speechText.textContent=spoken;
+  peterLastAnswerText=spoken;
   if(peterBatchMode) return;
 
   if(!("speechSynthesis" in window)){
