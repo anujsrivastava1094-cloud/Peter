@@ -2384,6 +2384,38 @@ function peterBrainContextCommand(command){
   return false;
 }
 
+function peterBrainGoalGet(){
+  try{return JSON.parse(localStorage.getItem("PETER_BRAIN_GOAL_KEY")||"null");}catch(e){return null;}
+}
+function peterBrainGoalSet(text){
+  const goal=String(text||"").trim();
+  if(!goal)return null;
+  const data={text:goal,updatedAt:Date.now(),mode:activeDayMode||"normal"};
+  localStorage.setItem("PETER_BRAIN_GOAL_KEY",JSON.stringify(data));
+  return data;
+}
+function peterBrainGoalCommand(command){
+  const s=peterNormalizeCommand(command).trim();
+  if(/^(?:what(?:'s| is) my (?:current )?goal|what am i working on|what was i working on|what was i doing|what am i doing)\??$/i.test(s)){
+    const g=peterBrainGoalGet();
+    const answer=g?"Your current goal is: "+g.text+".":"I don't have an active goal yet.";
+    peterBrainRecordLocal(s,answer); peterSpeak(answer); return true;
+  }
+  if(/^(?:continue|resume|continue my work|resume my work|keep going|continue where i left off)\.?$/i.test(s)){
+    const g=peterBrainGoalGet();
+    if(!g){const answer="I don't have a saved goal to resume yet."; peterBrainRecordLocal(s,answer); peterSpeak(answer); return true;}
+    const answer="Resuming: "+g.text+". Stay on this one target and continue from your last progress.";
+    peterBrainRecordLocal(s,answer); peterSpeak(answer); return true;
+  }
+  const m=s.match(/^(?:my goal is|i am working on|i'm working on|i want to work on)\s+(.+)$/i);
+  if(m){
+    const g=peterBrainGoalSet(m[1].replace(/[.!?]+$/,""));
+    const answer="Got it. I'll keep this as your current goal: "+g.text+".";
+    peterBrainRecordLocal(s,answer); peterSpeak(answer); return true;
+  }
+  return false;
+}
+
 function peterBrainPlanMinutes(raw){
   const s=String(raw||"").toLowerCase();
   const m=s.match(/(?:for|have|got|in)\s+(\d+)\s*(?:minutes?|mins?|m)\b/);
