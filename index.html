@@ -1938,6 +1938,7 @@ async function peterAskPlan(requestText){
 }
 
 async function peterAskCloudflareAI(message){
+  peterShowProcessing("Processing your question...");
   const endpoint=peterApi("/api/ai");
   const userMessage=String(message||"").trim();
   if(!userMessage) return false;
@@ -1955,7 +1956,7 @@ async function peterAskCloudflareAI(message){
     });
     const data=await response.json().catch(function(){return {};});
     if(!response.ok || !data.ok || !data.response) return false;
-    const answer=String(data.response).trim();
+    const answer=peterCleanAnswer(data.response);
     peterRememberConversation("assistant",answer);
     peterSpeak(answer);
     return true;
@@ -2258,29 +2259,43 @@ function peterInstantKnowledge(command){
   const answers=[
     {
       test:/^(?:what are )?(?:the )?benefits of running\??$/i,
-      answer:"Running can improve cardiovascular fitness, stamina, coordination, and overall physical health. Start gradually and give your body enough recovery."
+      answer:["• Improves cardiovascular fitness","• Builds stamina and endurance","• Supports overall health","• Start gradually and allow recovery."]
     },
     {
       test:/^(?:what are )?(?:the )?benefits of exercise\??$/i,
-      answer:"Regular exercise can improve fitness, strength, stamina, mood, sleep, and overall health. Consistency and recovery matter more than doing too much at once."
+      answer:["• Improves fitness and strength","• Supports mood and sleep","• Builds stamina and coordination","• Consistency matters more than overdoing it."]
     },
     {
       test:/^(?:who are you|what are you)\??$/i,
-      answer:"I am PETER, your personal control system. I can manage tasks, notes, routines, focus sessions, navigation, and AI-powered questions."
+      answer:["• I am PETER, your personal control system.","• I manage tasks, notes, routines, focus sessions and navigation.","• I can use AI for questions I cannot answer locally."]
     },
     {
       test:/^(?:what can you do|what can you do for me)\??$/i,
-      answer:"I can manage your tasks, notes, timeline, routines, focus sessions, school sections, plans, and voice commands. I can also use my AI brain for open-ended questions."
+      answer:["• Tasks and notes","• Timeline and routines","• Focus sessions","• School and planning","• Voice commands and AI questions"]
     }
   ];
   for(let i=0;i<answers.length;i++){
     if(answers[i].test.test(s)){
-      peterSpeak(answers[i].answer);
+      peterSpeak(answers[i].answer.join(" "));
       return true;
     }
   }
   return false;
 }
+
+function peterCleanAnswer(text){
+  let s=String(text||"").replace(/\*+/g,"");
+  s=s.replace(/^\s*(?:answer|response)\s*:\s*/i,"");
+  s=s.replace(/\n{3,}/g,"\n\n").trim();
+  return s;
+}
+
+function peterShowProcessing(message){
+  const el=document.getElementById("speechText");
+  if(el) el.textContent=message||"Processing...";
+}
+
+
 
 function peterProcessCommand(command){
   let s=peterNormalizeCommand(command).trim();
@@ -2433,6 +2448,7 @@ function peterProcessCommand(command){
   if(peterInstantKnowledge(s)) return;
 
   Promise.resolve().then(function(){
+    peterShowProcessing("Processing...");
     return peterCloudCommand(s);
   }).then(function(handled){
     if(handled) return true;
@@ -2678,6 +2694,7 @@ if("speechSynthesis" in window){
 
 function peterSpeak(text){
   peterUpdateVoiceModeFromState();
+  text=peterCleanAnswer(text);
   const spoken=String(text||"");
   speechText.textContent=spoken;
   if(peterBatchMode) return;
