@@ -2519,6 +2519,9 @@ function peterProcessCommand(command){
     return;
   }
 
+  /* Brain v16.1: build a local plan from available time and context. */
+  if(peterBrainPlanCommand(s)) return;
+
   /* Brain v16: answer local context questions before network/AI fallback. */
   if(peterBrainContextCommand(s)) return;
 
