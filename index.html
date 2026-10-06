@@ -2254,6 +2254,136 @@ function peterMultiActionRouter(command){
   return true;
 }
 
+
+/* =========================
+   PETER BRAIN v16 — LOCAL INTELLIGENCE
+   Free/local-first: no paid AI required for these commands.
+   ========================= */
+function peterBrainModeLabel(){
+  const names={normal:"Normal Day",school:"School Day",free:"Free Day"};
+  return names[activeDayMode]||"Normal Day";
+}
+function peterBrainParseTaskMinutes(value){
+  const m=String(value||"").match(/(?:^|\s)([01]?\d|2[0-3])(?::([0-5]\d))?\s*(am|pm)?/i);
+  if(!m)return null;
+  let h=Number(m[1]), min=Number(m[2]||0), ap=(m[3]||"").toLowerCase();
+  if(ap==="pm"&&h!==12)h+=12;
+  if(ap==="am"&&h===12)h=0;
+  return h*60+min;
+}
+function peterBrainMinutesNow(){
+  const d=new Date();
+  return d.getHours()*60+d.getMinutes();
+}
+function peterBrainGetTasks(){
+  return Array.isArray(data.tasks)?data.tasks:[];
+}
+function peterBrainScoreTask(task,nowMinutes){
+  if(!task||task.completed)return -999;
+  const title=String(task.title||"").toLowerCase();
+  let score=10;
+  const taskMinutes=peterBrainParseTaskMinutes(task.time);
+  if(taskMinutes!==null){
+    const delta=taskMinutes-nowMinutes;
+    if(delta<0)score+=Math.min(45,30+Math.min(15,Math.floor(Math.abs(delta)/30)));
+    else if(delta<=30)score+=35;
+    else if(delta<=90)score+=20;
+    else if(delta<=180)score+=10;
+  }
+  if(activeDayMode==="school" && /school|study|revision|jee|physics|chemistry|mathematics|math|english/.test(title))score+=18;
+  if(/urgent|important|priority|exam|deadline|due/.test(title))score+=20;
+  if(/sleep|dinner|rest/.test(title))score-=4;
+  return score;
+}
+function peterBrainGetPriorityTask(){
+  const now=peterBrainMinutesNow(), tasks=peterBrainGetTasks();
+  let best=null,bestScore=-Infinity;
+  tasks.forEach(function(task){
+    const score=peterBrainScoreTask(task,now);
+    if(score>bestScore){bestScore=score;best=task;}
+  });
+  return best;
+}
+function peterBrainGetScheduleState(){
+  const schedule=getActiveSchedule();
+  if(!schedule||!Array.isArray(schedule.timeline))return {current:null,next:null};
+  const now=peterBrainMinutesNow();
+  const list=schedule.timeline.slice().sort(function(a,b){return timeToMinutes(a.start)-timeToMinutes(b.start);});
+  let current=null,next=null;
+  list.forEach(function(item){
+    const start=timeToMinutes(item.start),end=timeToMinutes(item.end);
+    if(now>=start&&now<end&&!current)current=item;
+    if(start>now&&!next)next=item;
+  });
+  return {current:current,next:next};
+}
+function peterBrainReminderSummary(){
+  const reminders=peterLoadJson(PETER_REMINDERS_KEY).filter(function(x){return x&&!x.done;});
+  if(!reminders.length)return "no active reminders";
+  const due=reminders.filter(function(x){return Number(x.when||0)<=Date.now()+86400000;}).length;
+  return reminders.length+" active reminder"+(reminders.length===1?"":"s")+(due?" ("+due+" due within 24 hours)":"");
+}
+function peterBrainTimerSummary(){
+  const timers=peterLoadJson(PETER_TIMERS_KEY).filter(function(x){return x&&!x.done;});
+  return timers.length+" active timer"+(timers.length===1?"":"s");
+}
+function peterBrainRecordLocal(command,answer){
+  try{
+    const h=peterBrainHistory();
+    h.push({role:"user",content:String(command||"").slice(0,500),local:true});
+    h.push({role:"assistant",content:String(answer||"").slice(0,1000),local:true});
+    localStorage.setItem(PETER_BRAIN_HISTORY_KEY,JSON.stringify(h.slice(-8)));
+  }catch(e){}
+}
+function peterBrainDailyBriefing(){
+  const state=peterBrainGetScheduleState();
+  const priority=peterBrainGetPriorityTask();
+  const parts=["Today is "+peterBrainModeLabel()+"."];
+  if(state.current)parts.push("Now: "+state.current.title+".");
+  else if(state.next)parts.push("Next: "+state.next.title+" at "+formatScheduleTime(state.next.start)+".");
+  if(priority)parts.push("Priority: "+priority.title+".");
+  parts.push(peterBrainReminderSummary()+", "+peterBrainTimerSummary()+".");
+  const answer=parts.join(" ");
+  peterBrainRecordLocal("daily briefing",answer);
+  peterSpeak(answer);
+  return true;
+}
+function peterBrainPriorityCommand(){
+  const state=peterBrainGetScheduleState(), priority=peterBrainGetPriorityTask();
+  let answer="";
+  if(state.current){
+    answer="Right now: "+state.current.title+".";
+    if(state.current.desc)answer+=" "+state.current.desc;
+  }else if(state.next){
+    answer="Your next scheduled block is "+state.next.title+" at "+formatScheduleTime(state.next.start)+".";
+  }else{
+    answer="There is no active scheduled block right now.";
+  }
+  if(priority)answer+=" Priority task: "+priority.title+".";
+  peterBrainRecordLocal("what should I do now",answer);
+  peterSpeak(answer);
+  return true;
+}
+function peterBrainContextCommand(command){
+  const s=peterNormalizeCommand(command).trim();
+  if(/^(?:briefing|daily briefing|give me (?:my )?briefing|good morning|what(?:'s| is) my day like|how is my day)\??$/i.test(s)){
+    return peterBrainDailyBriefing();
+  }
+  if(/^(?:what should i do now|what do i do now|what next|what(?:'s| is) next|next task|my priority|highest priority)\??$/i.test(s)){
+    return peterBrainPriorityCommand();
+  }
+  if(/^(?:what is my mode|what mode am i in|current day mode)\??$/i.test(s)){
+    const answer="You are in "+peterBrainModeLabel+".";
+    peterBrainRecordLocal(s,answer);
+    peterSpeak(answer);
+    return true;
+  }
+  if(/^(?:what do i have today|show my priorities|today's priorities|todays priorities)\??$/i.test(s)){
+    return peterBrainDailyBriefing();
+  }
+  return false;
+}
+
 function peterInstantKnowledge(command){
   const s=peterNormalizeCommand(command).trim();
   const answers=[
