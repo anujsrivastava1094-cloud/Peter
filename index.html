@@ -2348,6 +2348,14 @@ function peterProcessCommand(command){
   if(peterRoutineCommand(s)) return;
   if(!s) return;
 
+  /* PETER answer dismissal: keep the latest answer visible until the user
+     explicitly says OK/Okay, then clear it without creating a new reply. */
+  if(/^(?:ok|okay)$/i.test(s)){
+    peterLastAnswerText="";
+    speechText.textContent="";
+    return;
+  }
+
   /* Phase 4: conditional decision → action workflows. */
   if(peterConditionalActionRouter(s)) return;
 
