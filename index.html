@@ -2551,6 +2551,9 @@ function peterProcessCommand(command){
     return;
   }
 
+  /* Brain v16.2: keep a persistent current goal and resume it on command. */
+  if(peterBrainGoalCommand(s)) return;
+
   /* Brain v16.1: build a local plan from available time and context. */
   if(peterBrainPlanCommand(s)) return;
 
